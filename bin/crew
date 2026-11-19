@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Lets agents and people type `crew` with hqrCrew/bin on PATH.
+exec node "$(dirname "$(readlink -f "$0")")/crew.js" "$@"

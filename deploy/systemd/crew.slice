@@ -1,0 +1,10 @@
+# Everything crew runs (coders, verifiers, the lead, checks, builds, previews) shares this ceiling,
+# so a runaway job is killed inside crew's own cgroup, never next to the databases.
+[Unit]
+Description=crew: night-shift agents, builds and previews
+
+[Slice]
+MemoryHigh=5G
+MemoryMax=5500M
+MemorySwapMax=1G
+CPUWeight=30

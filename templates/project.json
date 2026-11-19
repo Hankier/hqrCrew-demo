@@ -1,0 +1,13 @@
+{
+  "prefix": "{prefix}",
+  "name": "{name}",
+  "repo": { "url": "", "base": "main", "remote": "origin", "push": false, "compareUrl": "" },
+  "setup": [],
+  "gate": [
+    { "name": "tests", "run": "npm test", "stage": "fast", "timeoutMin": 15 }
+  ],
+  "gateProtected": [],
+  "env": { "file": "agent.env", "vars": {} },
+  "db": null,
+  "preview": null
+}

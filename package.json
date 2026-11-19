@@ -1,0 +1,17 @@
+{
+  "name": "hqrcrew-demo",
+  "version": "0.1.0",
+  "description": "One orchestrator, a crew of Claude Code or Codex agents, a night-shift queue and on-demand previews. Tickets are files.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "crew": "bin/crew.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "serve": "node bin/crew.js serve"
+  }
+}

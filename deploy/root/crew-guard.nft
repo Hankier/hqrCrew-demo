@@ -1,0 +1,11 @@
+# Keep the crew user (the agents) away from the live databases, even over localhost TCP.
+# Example ports: 5432 your app's Postgres, 5555 a demo/dev Postgres, 48684 and 48690 two other apps.
+# Add any other live service port here.
+# Load at boot: include this file from /etc/nftables.conf and `systemctl enable --now nftables`.
+table inet crewguard {
+  chain out {
+    type filter hook output priority 0; policy accept;
+    meta skuid "crew" ip daddr 127.0.0.0/8 tcp dport { 5432, 5555, 48684, 48690 } counter reject with tcp reset
+    meta skuid "crew" ip6 daddr ::1 tcp dport { 5432, 5555, 48684, 48690 } counter reject with tcp reset
+  }
+}

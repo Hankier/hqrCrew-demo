@@ -1,0 +1,30 @@
+# crew's own Postgres: disposable copies of the demo data for workers and previews.
+# Run by your admin user (who has Docker), not by crew. Bound to localhost only.
+# It never holds the demo database, the dev database or anything from production.
+#   cd ~/crew-pg && cp .env.example .env && edit .env && docker compose up -d
+services:
+  crew-pg:
+    image: postgres:16
+    container_name: crew-pg
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:20150:5432"
+    environment:
+      POSTGRES_USER: crew_admin
+      POSTGRES_PASSWORD: ${CREW_ADMIN_PASSWORD:?set it in .env}
+      POSTGRES_DB: postgres
+      CREW_DB_PASSWORD: ${CREW_DB_PASSWORD:?set it in .env}
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40"]
+    volumes:
+      - crew_pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    mem_limit: 512m
+    memswap_limit: 768m
+    oom_score_adj: 300
+    cpus: 1.0
+    logging:
+      driver: local
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  crew_pgdata:

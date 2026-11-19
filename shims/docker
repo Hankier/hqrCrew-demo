@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# crew shim: a project's test setup may create its database with
+#   docker exec <container> psql -U <user> -d postgres -c "CREATE DATABASE …"
+# Workers have no Docker rights (Docker access is root access), so this runs the same psql
+# against crew's own Postgres instead. PGHOST, PGPORT, PGUSER and PGPASSWORD come from agent.env.
+set -euo pipefail
+if [ "${1:-}" != "exec" ]; then
+  echo "crew shim: only 'docker exec <container> psql …' is supported here" >&2
+  exit 64
+fi
+shift
+while [[ "${1:-}" == -* ]]; do
+  case "$1" in
+    -e|--env|-u|--user|-w|--workdir) shift 2 ;; # flags that take a value
+    *) shift ;;                                  # -i, -t, -it
+  esac
+done
+shift # container name
+if [ "${1:-}" != "psql" ]; then
+  echo "crew shim: only psql is supported inside docker exec" >&2
+  exit 64
+fi
+shift
+args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -U) shift 2 ;; # crew's role (PGUSER) replaces the container user
+    -U*) shift ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+exec psql "${args[@]}"

@@ -1,0 +1,16 @@
+{
+  "prefix": "{prefix}",
+  "name": "{name}",
+  "repo": { "url": "", "base": "main", "remote": "origin", "push": false, "compareUrl": "" },
+  "setup": ["pnpm install --frozen-lockfile --prefer-offline"],
+  "gate": [
+    { "name": "lint", "run": "pnpm lint", "stage": "fast", "timeoutMin": 10 },
+    { "name": "typecheck", "run": "pnpm exec tsc --noEmit", "stage": "fast", "timeoutMin": 10 },
+    { "name": "tests", "run": "pnpm test", "stage": "fast", "timeoutMin": 15 },
+    { "name": "build", "run": "pnpm build", "stage": "full", "heavy": true, "memoryMax": "2G", "timeoutMin": 15 }
+  ],
+  "gateProtected": ["vitest.config.*", "jest.config.*", "eslint.config.*", ".eslintrc*", "tsconfig.json", ".github/**", "CLAUDE.md", "AGENTS.md", ".claude/**"],
+  "env": { "file": "agent.env", "vars": { "NODE_ENV": "test" } },
+  "db": null,
+  "preview": null
+}

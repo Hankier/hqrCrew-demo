@@ -1,0 +1,9 @@
+# One heavy thing at a time (next build, the gate's test run); crew holds a lock for it.
+# A Next.js production build peaked at 4.5 GB (4 CPUs, Next 15.5, with its own type check).
+[Unit]
+Description=crew: heavy work (builds, test runs)
+
+[Slice]
+MemoryMax=5G
+MemorySwapMax=768M
+CPUQuota=300%

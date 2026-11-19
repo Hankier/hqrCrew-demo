@@ -1,0 +1,25 @@
+# The board, the lead and the night-shift runner, as the crew user.
+# Install: cp to ~/.config/systemd/user/, then: systemctl --user daemon-reload && systemctl --user enable --now crew
+[Unit]
+Description=crew: board, lead and night-shift runner
+After=network-online.target
+
+[Service]
+Type=simple
+Slice=crew.slice
+EnvironmentFile=%h/.config/crew/env
+Environment=CREW_HOME=%h/crew
+Environment=CREW_SLICE=crew.slice
+Environment=CREW_HEAVY_SLICE=crew-heavy.slice
+Environment=CREW_PREVIEW_SLICE=crew-preview.slice
+ExecStart=/usr/bin/env node %h/hqrCrew-demo/bin/crew.js serve
+Restart=on-failure
+RestartSec=15
+# The server itself is small: every agent, check, build and preview runs in its own capped scope
+# inside crew.slice, not in this service. If something in here is OOM-killed, keep the service up.
+MemoryMax=1G
+OOMPolicy=continue
+OOMScoreAdjust=200
+
+[Install]
+WantedBy=default.target

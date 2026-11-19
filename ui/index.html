@@ -1,0 +1,3052 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#09090b">
+<meta name="color-scheme" content="dark">
+<title>hqrCrew</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='2' fill='%2309090b'/%3E%3Crect x='3' y='3' width='5' height='5' fill='%23e8a33d'/%3E%3Crect x='8' y='8' width='5' height='5' fill='%23e8a33d'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>
+/* hqrCrew board · Calm HUD.
+   Structure is neutral, accent is state: amber = needs you / waiting, green = good (running, PASS, preview up),
+   burgundy = blocked or failed, violet = previews. 3px corners, hairlines, no shadows except status glows. */
+:root{
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"Geist","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --mono:"Geist Mono","Cascadia Code",Consolas,ui-monospace,"SF Mono",Menlo,monospace;
+  --gold:#e8a33d; --gold-hi:#ffd08a; --gold-deep:#8a5f1f;
+  --green:#5f9b72; --green-hi:#8cc59d;
+  --burgundy:#c1556b; --burgundy-hi:#e39aa8;
+  --violet:#8b7ec8; --violet-hi:#bcb2ec;
+  --page:#09090b; --page-hi:#141317; --t:228,228,231;
+  --ink:#f4f4f5; --ink-2:#d4d4d8; --muted:#a1a1aa; --helper:#8b8b94;
+  --panel:rgba(var(--t),.025); --tile:rgba(var(--t),.04); --field:rgba(0,0,0,.32);
+  --line:rgba(var(--t),.14); --line-soft:rgba(var(--t),.08); --grid:rgba(var(--t),.045);
+  --accent:var(--gold); --accent-hi:var(--gold-hi); --accent-deep:var(--gold-deep);
+  --f1:14.5px; --r:3px; --bar:52px;
+  --g:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px));
+  --barh:53px; --chatw:360px; --drawer:600px;
+  --sheet:#0d0d10;
+  color-scheme:dark;
+}
+[data-zone="amber"]{--accent:var(--gold);--accent-hi:var(--gold-hi);--accent-deep:var(--gold-deep)}
+[data-zone="green"]{--accent:#74b78a;--accent-hi:#a8dcbb;--accent-deep:#33654a}
+[data-zone="violet"]{--accent:var(--violet);--accent-hi:var(--violet-hi);--accent-deep:#4b4283}
+[data-zone="burgundy"]{--accent:var(--burgundy);--accent-hi:var(--burgundy-hi);--accent-deep:#6d2f3c}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;background:var(--page)}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--page-hi) 0,var(--page) 520px);color:var(--ink);font:400 var(--f1)/1.5 var(--sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 45%);mask-image:linear-gradient(180deg,#000,transparent 45%)}
+b,strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent-hi);text-decoration-color:color-mix(in srgb,var(--accent) 50%,transparent);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--accent-hi)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:default;opacity:.5}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3,h4,h5,h6{margin:0;font-weight:600;color:var(--ink)}
+p,ul,ol,blockquote,table,figure,pre{margin:0}
+.mono{font-family:var(--mono)}
+.label{font:500 11px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--helper)}
+.muted{color:var(--muted)}
+.helper{color:var(--helper)}
+.small{font-size:13px;line-height:1.5}
+.grow{flex:1 1 auto}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+::selection{background:rgba(232,163,61,.3)}
+*{scrollbar-width:thin;scrollbar-color:rgba(var(--t),.16) transparent}
+
+/* status dots (template .st) */
+.st{display:inline-flex;align-items:baseline;gap:7px;font:500 12.5px/1.3 var(--mono);color:var(--ink-2)}
+.st::before{content:"";width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--muted);transform:translateY(-1px)}
+.st.yes::before{background:var(--green-hi);box-shadow:0 0 8px var(--green-hi)}
+.st.yes{color:var(--green-hi)}
+.st.part::before{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.st.part{color:var(--gold-hi)}
+.st.no::before{background:transparent;border:1px dashed var(--muted)}
+.st.risk::before{background:var(--burgundy-hi);box-shadow:0 0 8px var(--burgundy-hi)}
+.st.risk{color:var(--burgundy-hi)}
+.st.pv::before{background:var(--violet-hi);box-shadow:0 0 8px var(--violet)}
+.st.pv{color:var(--violet-hi)}
+.st.pulse::before{animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+/* buttons and fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border:1px solid var(--line);background:transparent;color:var(--ink-2);border-radius:var(--r);padding:7px 12px;font:500 11.5px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:background .12s ease,border-color .12s ease}
+.btn:hover{background:var(--tile);border-color:rgba(var(--t),.26)}
+.btn.acc{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent-hi)}
+.btn.acc:hover{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.btn.solid{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.btn.solid:hover{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+.btn.go{border-color:var(--green);background:rgba(95,155,114,.12);color:var(--green-hi)}
+.btn.go:hover{background:rgba(95,155,114,.2)}
+.btn.danger{border-color:var(--burgundy);background:rgba(193,85,107,.1);color:var(--burgundy-hi)}
+.btn.danger:hover{background:rgba(193,85,107,.18)}
+.btn.big{min-height:44px;padding:10px 18px;font-size:12.5px}
+.btn[aria-busy="true"]{opacity:.65}
+.ibtn{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid var(--line-soft);border-radius:var(--r);background:transparent;color:var(--ink-2);font:400 20px/1 var(--sans);padding:0}
+.ibtn:hover{background:var(--tile);border-color:var(--line)}
+.linkbtn{border:0;background:none;padding:2px 4px;color:var(--accent-hi);font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+textarea,input[type="text"],select{font:400 15px/1.45 var(--sans);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;min-height:42px;width:100%;transition:border-color .12s ease}
+textarea{resize:vertical;display:block}
+textarea::placeholder,input::placeholder{color:#71717a}
+textarea:focus,input[type="text"]:focus,select:focus{border-color:rgba(var(--t),.32)}
+textarea:focus-visible,input[type="text"]:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+select{width:auto;padding-right:30px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg>button{min-height:38px;padding:0 13px;border:0;background:transparent;color:var(--muted);font:500 13px/1.2 var(--sans);white-space:nowrap}
+.seg>button+button{border-left:1px solid var(--line)}
+.seg>button:hover{color:var(--ink-2);background:var(--panel)}
+.seg>button[aria-pressed="true"]{background:rgba(var(--t),.09);color:var(--ink)}
+.seg>button:focus-visible{outline-offset:-2px}
+.tag{display:inline-block;padding:1px 6px;border:1px solid var(--line-soft);border-radius:2px;font:500 10.5px/1.45 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+
+/* ---- top bar ---- */
+.bar{position:sticky;top:0;z-index:40;background:rgba(9,9,11,.88);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar .in{display:flex;align-items:center;gap:10px;min-height:var(--bar);padding:6px var(--gr) 6px var(--g)}
+.brand{display:inline-flex;align-items:center;gap:7px;min-height:40px;font:600 12.5px/1 var(--mono);letter-spacing:.02em;text-transform:none;color:var(--ink);text-decoration:none;white-space:nowrap}
+.brand span{color:var(--gold);filter:drop-shadow(0 0 6px rgba(232,163,61,.6))}
+.proj{flex:0 1 auto;min-width:0;padding-left:11px;border-left:1px solid var(--line-soft);font:400 13px/1.3 var(--sans);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.projsel{font:500 12.5px/1.2 var(--mono);color:var(--ink-2);background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;max-width:190px;min-height:32px}
+.runchip{display:inline-flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;max-width:340px;min-height:34px;padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--field);font:500 12px/1.2 var(--mono);color:var(--ink-2)}
+.runchip:hover{border-color:rgba(var(--t),.26)}
+.runchip .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--helper)}
+.runchip .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.runchip .caret{flex:none;color:var(--helper);font-size:10px}
+.runchip[data-tone="run"]{border-color:rgba(95,155,114,.55);color:var(--green-hi)}
+.runchip[data-tone="run"] .dot{background:var(--green-hi);box-shadow:0 0 8px var(--green-hi);animation:pulse 2.4s ease-in-out infinite}
+.runchip[data-tone="wait"]{border-color:rgba(232,163,61,.5);color:var(--gold-hi)}
+.runchip[data-tone="wait"] .dot{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.runchip[data-tone="risk"]{border-color:rgba(193,85,107,.65);color:var(--burgundy-hi)}
+.runchip[data-tone="risk"] .dot{background:var(--burgundy-hi);box-shadow:0 0 8px var(--burgundy-hi)}
+.meters{display:flex;gap:6px;flex:none}
+.meter{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:4px 8px;border:1px solid var(--line-soft);border-radius:var(--r);background:transparent;font:500 11.5px/1 var(--mono);color:var(--ink-2)}
+.meter:hover{border-color:var(--line)}
+.meter .m-l{color:var(--helper)}
+.meter .m-bar{position:relative;width:32px;height:4px;border-radius:2px;background:rgba(var(--t),.1);overflow:hidden}
+.meter .m-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--ink-2)}
+.meter.wait .m-bar i{background:var(--gold)} .meter.wait .m-v{color:var(--gold-hi)}
+.meter.risk .m-bar i{background:var(--burgundy-hi)} .meter.risk .m-v{color:var(--burgundy-hi)}
+.pvs{display:flex;gap:6px;flex:0 1 auto;min-width:0;overflow:hidden}
+.pvchip{display:inline-flex;align-items:center;gap:7px;flex:0 1 auto;min-width:0;overflow:hidden;min-height:34px;padding:4px 9px;border:1px solid rgba(95,155,114,.45);border-radius:var(--r);font:500 11.5px/1 var(--mono);color:var(--green-hi);text-decoration:none;white-space:nowrap}
+.pvchip:hover{background:rgba(95,155,114,.1)}
+.pvchip.busy{border-color:rgba(232,163,61,.45);color:var(--gold-hi)}
+.pvchip .st::before{width:7px;height:7px}
+.pvchip .pv-t{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pvchip>span:not(.pv-t){flex:none}
+.labchip{display:inline-flex;align-items:center;gap:7px;flex:none;min-height:34px;padding:4px 9px;border:1px solid var(--line);border-radius:var(--r);background:transparent;font:500 11.5px/1 var(--mono);color:var(--ink-2);white-space:nowrap}
+.labchip:hover{background:var(--tile)}
+.labchip .dot{flex:none;width:7px;height:7px;border-radius:50%;border:1px dashed var(--muted)}
+.labchip .lt{color:var(--muted)}
+.labchip[data-tone="up"]{border-color:rgba(95,155,114,.45);color:var(--green-hi)}
+.labchip[data-tone="up"] .dot{border:0;background:var(--green-hi);box-shadow:0 0 6px var(--green-hi)}
+.labchip[data-tone="busy"]{border-color:rgba(232,163,61,.45);color:var(--gold-hi)}
+.labchip[data-tone="busy"] .dot{border:0;background:var(--gold);box-shadow:0 0 6px var(--gold);animation:pulse 1.6s ease-in-out infinite}
+.labchip[data-tone="bad"]{border-color:rgba(193,85,107,.6);color:var(--burgundy-hi)}
+.labchip[data-tone="bad"] .dot{border:0;background:var(--burgundy-hi);box-shadow:0 0 6px var(--burgundy-hi)}
+.labchip[aria-expanded="true"]{background:var(--tile);border-color:rgba(var(--t),.28)}
+.live{display:inline-flex;align-items:center;gap:6px;flex:none;font:500 11px/1 var(--mono);color:var(--helper);white-space:nowrap}
+.live i{width:6px;height:6px;border-radius:50%;background:var(--helper)}
+.live[data-state="live"] i{background:var(--green-hi);box-shadow:0 0 6px var(--green-hi)}
+.live[data-state="reconnecting"]{color:var(--gold-hi)}
+.live[data-state="reconnecting"] i{background:var(--gold);box-shadow:0 0 6px var(--gold);animation:pulse 1.2s ease-in-out infinite}
+.topbtn{position:relative;min-height:36px}
+.topbtn .ico{font:400 17px/1 var(--sans);letter-spacing:0;margin-top:-1px}
+.topbtn svg{flex:none}
+.topbtn .cdot{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;border:2px solid var(--page);display:none}
+.topbtn.busy .cdot{display:block;background:var(--green-hi);box-shadow:0 0 6px var(--green-hi);animation:pulse 1.6s ease-in-out infinite}
+.topbtn.unread .cdot{display:block;background:var(--gold);box-shadow:0 0 6px var(--gold);animation:none}
+.topbtn[aria-expanded="true"]{background:var(--tile);border-color:rgba(var(--t),.28);color:var(--ink)}
+.brk{display:none}
+
+/* ---- runner menu ---- */
+.menu{position:fixed;z-index:65;top:60px;left:16px;width:min(352px,calc(100vw - 32px));max-height:calc(100dvh - 80px);overflow:auto;padding:16px;background:#111114;border:1px solid var(--line);border-radius:var(--r)}
+.menu>*+*{margin-top:14px}
+.menu .rm-line{font:500 13px/1.45 var(--mono)}
+.menu .rm-detail{font-size:13.5px;line-height:1.5;color:var(--muted);margin-top:6px}
+.menu .seg{display:flex}
+.menu .seg>button{flex:1}
+.menu .rm-hint{font-size:12.5px;color:var(--helper);margin-top:8px}
+.usage{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;font:400 12.5px/1.3 var(--mono);color:var(--ink-2)}
+.usage .ub{height:4px;border-radius:2px;background:rgba(var(--t),.1);position:relative;overflow:hidden}
+.usage .ub i{position:absolute;inset:0 auto 0 0;background:var(--ink-2);border-radius:2px}
+.usage .ub.wait i{background:var(--gold)} .usage .ub.risk i{background:var(--burgundy-hi)}
+.usage .ur{grid-column:2/4;margin-top:-4px;color:var(--helper);font-size:11.5px}
+.rm-facts{list-style:none;padding:0;font-size:13px;color:var(--muted);line-height:1.5}
+.rm-facts li+li{margin-top:4px}
+.rm-btns{display:flex;flex-wrap:wrap;gap:8px}
+/* lab menu: same shell as the runner menu */
+.lab-sec>*+*{margin-top:12px}
+.lab-sec+.lab-sec{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft)}
+.lab-sec .pv-open{min-height:48px;padding:10px 12px}
+.lab-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.lab-sec .logins li{display:flex;gap:10px}
+.lab-sec .logins .role{flex:none;min-width:58px;color:var(--helper)}
+.lab-sec .pv-err{margin-top:0}
+
+/* ---- app shell ---- */
+.app{position:relative}
+.main{position:relative;min-width:0;container-type:inline-size;container-name:board}
+.tabs{display:none}
+/* --cols and --n come from the board model (renderBoard), so a new column needs no CSS change. */
+.board{display:grid;grid-template-columns:var(--cols,minmax(150px,1fr) minmax(184px,1.3fr) repeat(4,minmax(150px,1fr)));gap:8px;padding:12px var(--gr) 12px var(--g);min-height:0}
+.board-msg{grid-column:1/-1;padding:40px 0;text-align:center;font:italic 400 17px/1.5 var(--serif);color:var(--muted)}
+.board-msg .btn{margin-top:14px;font-style:normal}
+.col{display:flex;flex-direction:column;min-width:0;min-height:0;border:1px solid var(--line-soft);border-radius:var(--r);background:var(--panel);position:relative}
+.col-head{flex:none;padding:10px 12px 9px;border-bottom:1px solid var(--line-soft)}
+.col-title{display:flex;align-items:baseline;gap:8px;font:600 13.5px/1.25 var(--sans);color:var(--ink)}
+.col-title .n{font:500 12px/1 var(--mono);color:var(--helper)}
+.col-hint{margin-top:3px;font-size:12px;line-height:1.35;color:var(--helper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px;display:flex;flex-direction:column;gap:8px}
+.col.you{border-color:rgba(232,163,61,.38);background:rgba(232,163,61,.035)}
+.col.you::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;height:2px;border-radius:var(--r) var(--r) 0 0;background:linear-gradient(90deg,var(--gold),transparent 85%)}
+.col.you .col-title{color:var(--gold-hi)}
+.col.you .col-title .n{color:var(--gold)}
+.col.you .col-hint{color:rgba(255,208,138,.62)}
+
+/* cards */
+.card{display:block;position:relative;padding:10px 11px;border:1px solid var(--line-soft);border-radius:var(--r);background:rgba(22,21,26,.8);color:var(--ink);text-decoration:none;overflow-wrap:anywhere;transition:border-color .12s ease,background .12s ease}
+.card:hover{border-color:rgba(var(--t),.22);background:rgba(30,29,35,.9)}
+.card.sel{border-color:rgba(var(--t),.42);background:rgba(34,33,40,.95)}
+.card.blocked{border-left:2px solid var(--burgundy);padding-left:10px}
+.card.flash{animation:flash 2.6s ease-out}
+@keyframes flash{0%{border-color:rgba(var(--t),.62);background:rgba(var(--t),.09)}}
+.card:focus-visible{outline-offset:1px}
+.c-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font:500 11.5px/1.3 var(--mono);color:var(--helper)}
+.c-top .id{color:var(--ink-2);letter-spacing:.02em}
+.c-top .pos{margin-left:auto}
+.mk{display:inline-block;padding:0 5px;border-radius:2px;font:500 10.5px/1.5 var(--mono);white-space:nowrap}
+.mk.p1{color:var(--gold-hi);border:1px solid rgba(232,163,61,.5)}
+.mk.rn{color:var(--green-hi);border:1px solid rgba(95,155,114,.5)}
+.c-title{margin-top:6px;font:500 14px/1.4 var(--sans);color:var(--ink)}
+.c-needs{margin-top:6px;font:400 13px/1.42 var(--sans);color:var(--gold-hi);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.c-meta{margin-top:8px;display:flex;flex-wrap:wrap;gap:3px 10px;font:400 11.5px/1.4 var(--mono);color:var(--helper)}
+.c-meta .ok{color:var(--green-hi)}
+.c-meta .bad{color:var(--burgundy-hi)}
+.c-meta .warn{color:var(--gold-hi)}
+.c-meta .c-step{color:var(--green-hi)}
+.c-meta .c-step::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green-hi);box-shadow:0 0 6px var(--green-hi);margin-right:6px;transform:translateY(-1px);animation:pulse 1.8s ease-in-out infinite}
+/* design-round badge: amber = a round to read, green = designing or accepted, burgundy = failed */
+.c-meta .dzb{color:var(--ink-2)}
+.c-meta .dzb::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:6px;transform:translateY(-1px)}
+.c-meta .dzb.t-ready{color:var(--gold-hi)}
+.c-meta .dzb.t-ready::before{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+.c-meta .dzb.t-run,.c-meta .dzb.t-ok{color:var(--green-hi)}
+.c-meta .dzb.t-run::before{background:var(--green-hi);box-shadow:0 0 6px var(--green-hi);animation:pulse 1.8s ease-in-out infinite}
+.c-meta .dzb.t-ok::before{background:var(--green-hi)}
+.c-meta .dzb.t-bad{color:var(--burgundy-hi)}
+.c-meta .dzb.t-bad::before{background:var(--burgundy-hi);box-shadow:0 0 6px var(--burgundy-hi)}
+.c-meta .dzb.t-idle{color:var(--helper)}
+.c-meta .dzb.t-idle::before{background:transparent;border:1px dashed var(--muted)}
+.empty{margin:2px 0;padding:18px 12px;border:1px dashed var(--line-soft);border-radius:var(--r);font:italic 400 15px/1.45 var(--serif);color:var(--helper);text-align:center}
+.col.you .empty{color:var(--muted)}
+
+/* parked */
+.parked{margin:0 var(--gr) 12px var(--g);border:1px solid var(--line-soft);border-radius:var(--r);background:var(--panel)}
+.parked summary{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;cursor:pointer;list-style:none;font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--helper)}
+.parked summary::-webkit-details-marker{display:none}
+.parked summary::before{content:"▸";font-size:11px;color:var(--helper);transition:transform .12s ease}
+.parked[open] summary::before{transform:rotate(90deg)}
+.parked summary b{font-weight:500;color:var(--ink-2)}
+.parked summary .ph{letter-spacing:0;text-transform:none;font-family:var(--sans);font-size:12.5px;color:var(--helper)}
+.parked-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;padding:0 12px 12px;max-height:34vh;overflow:auto}
+
+/* ---- chat ---- */
+.chat{display:flex;flex-direction:column;min-height:0;background:#0c0c0f;border-left:1px solid var(--line);position:relative}
+.chat-head{flex:none;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 10px 6px 16px;border-bottom:1px solid var(--line-soft)}
+.chat-head h2{font:500 21px/1 var(--serif);letter-spacing:-.01em}
+.chat-head .chat-meta{font:400 11.5px/1.2 var(--mono);color:var(--helper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.chat-log{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 14px 10px}
+.msgs,.pend{display:flex;flex-direction:column;gap:10px}
+.pend:not(:empty){margin-top:10px}
+.msg{max-width:88%;padding:9px 12px;border:1px solid var(--line-soft);border-radius:var(--r);overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:rgba(var(--t),.075);border-color:var(--line)}
+.msg.lead{align-self:flex-start;background:rgba(var(--t),.02)}
+.msg.err{border-color:rgba(193,85,107,.6);background:rgba(193,85,107,.06)}
+.msg.pending{opacity:.72}
+.msg.pending.err{opacity:1}
+.msg-meta{margin-top:5px;font:400 11px/1.3 var(--mono);color:var(--helper)}
+.msg.me .msg-meta{text-align:right}
+.msg.err .msg-meta{color:var(--burgundy-hi)}
+.sys{display:flex;gap:9px;align-items:baseline;padding:1px 2px;font:400 12px/1.5 var(--mono);color:var(--helper)}
+.sys .sys-when{flex:none;color:#6b6b74}
+.sys .sys-text{min-width:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.sys a.tid{color:var(--ink-2)}
+.day{align-self:center;padding:4px 0;font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#6b6b74}
+.chat-empty{padding:28px 10px;text-align:center;font:italic 400 16px/1.5 var(--serif);color:var(--muted)}
+.typing{margin-top:12px;max-width:88%;padding:9px 12px;border:1px dashed rgba(95,155,114,.45);border-radius:var(--r);overflow-wrap:anywhere}
+.typing .st{font-size:11.5px}
+.typing .partial{margin-top:6px;color:var(--muted)}
+.typing .tools{margin-top:6px;display:flex;flex-direction:column;gap:2px;font:400 11.5px/1.45 var(--mono);color:var(--helper)}
+.typing .tool{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newmsg{position:absolute;left:50%;transform:translateX(-50%);bottom:90px;z-index:2;min-height:34px;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);background:#17171b;color:var(--ink-2);font:500 11.5px/1 var(--mono)}
+.chat-form{flex:none;display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--line-soft)}
+.chat-form textarea{flex:1;min-height:42px;max-height:180px;resize:none;overflow-y:auto}
+.chat-form .btn{min-height:42px}
+.chat-hint{flex:none;padding:0 12px 10px;font:400 11px/1.3 var(--mono);color:#6b6b74}
+
+/* ---- markdown ---- */
+.md{color:var(--ink-2);font-size:15px;line-height:1.6;overflow-wrap:break-word}
+.md>*+*{margin-top:10px}
+.md h3{font:600 16.5px/1.35 var(--sans);color:var(--ink)}
+.md h4{font:600 15px/1.35 var(--sans);color:var(--ink)}
+.md h5,.md h6{font:500 11.5px/1.35 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--helper)}
+.md *+h3,.md *+h4,.md *+h5{margin-top:18px}
+.md ul,.md ol{padding-left:22px}
+.md li+li{margin-top:5px}
+.md li>ul,.md li>ol{margin-top:5px}
+.md li::marker{color:var(--helper)}
+.md code{font-family:var(--mono);font-size:.86em;background:var(--tile);border:1px solid var(--line-soft);border-radius:var(--r);padding:0 5px;color:var(--ink);white-space:pre-wrap}
+.md pre.code{background:var(--field);border:1px solid var(--line-soft);border-radius:var(--r);padding:10px 12px;overflow-x:auto;font:400 12.5px/1.55 var(--mono);color:var(--ink-2)}
+.md pre.code code{background:none;border:0;padding:0;font-size:inherit;white-space:pre}
+.md blockquote{padding-left:12px;border-left:2px solid var(--line);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--line-soft)}
+.md a{overflow-wrap:anywhere}
+.md a.tid{font-family:var(--mono);font-size:.92em}
+.md .tick{display:inline-block;width:12px;height:12px;margin-right:7px;border:1px solid var(--muted);border-radius:2px;vertical-align:-1px}
+.md .tick.on{background:var(--green);border-color:var(--green)}
+.tbl{overflow-x:auto;min-width:0;border-top:1px solid var(--line)}
+.tbl table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.5}
+.tbl th,.tbl td{text-align:left;vertical-align:top;padding:9px 12px 9px 0;border-bottom:1px solid var(--line-soft)}
+.tbl th{font:500 10.5px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--helper);white-space:nowrap}
+.tbl td{color:var(--ink-2);min-width:64px}
+.tbl td.n{font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--ink)}
+.chat-md{font-size:14.5px;line-height:1.55}
+.chat-md>*+*{margin-top:8px}
+
+/* ---- ticket drawer ---- */
+.drawer{position:fixed;z-index:50;top:var(--barh);right:0;bottom:0;width:min(var(--drawer),calc(100vw - 48px));display:flex;flex-direction:column;background:var(--sheet);border-left:1px solid var(--line)}
+.dr-head{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:52px;padding:6px 10px 6px 20px;border-bottom:1px solid var(--line-soft)}
+.dr-head .back{order:10;margin-left:auto}
+.dr-id{font:600 13px/1 var(--mono);letter-spacing:.03em;color:var(--ink)}
+.dr-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:18px 20px 56px}
+.dr-loading{padding:30px 0;font:italic 400 17px/1.5 var(--serif);color:var(--muted)}
+.dr-loading .btn{margin-top:14px;font-style:normal}
+.dr-title{font:500 27px/1.2 var(--serif);letter-spacing:-.01em;color:var(--ink);overflow-wrap:break-word;outline:none}
+.facts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font:400 12px/1.45 var(--mono);color:var(--helper)}
+.facts .hot{color:var(--gold-hi)}
+.dr-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:10px}
+.branch{display:inline-flex;align-items:center;gap:4px;min-width:0;font:400 12.5px/1.4 var(--mono);color:var(--ink-2);overflow-wrap:anywhere}
+.branch .copy{min-height:32px;padding:4px 8px;border:1px solid var(--line-soft);border-radius:var(--r);background:none;color:var(--helper);font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.branch .copy:hover{color:var(--ink-2);border-color:var(--line)}
+.diffstat{font:400 12px/1.4 var(--mono);color:var(--helper)}
+.blk{margin-top:18px;padding:14px 14px 15px;border:1px solid var(--line-soft);border-radius:var(--r);background:var(--panel);position:relative}
+.blk>*+*{margin-top:12px}
+.blk-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.blk-label{font:500 11px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.blk.needs,.blk.pv{border-color:color-mix(in srgb,var(--accent) 42%,transparent);background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.blk.needs::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;height:2px;border-radius:var(--r) var(--r) 0 0;background:linear-gradient(90deg,var(--accent),transparent 80%)}
+.blk-lead{font-size:14.5px;color:var(--ink-2)}
+.q+.q{padding-top:14px;border-top:1px solid color-mix(in srgb,var(--accent) 22%,transparent)}
+.q-meta{font:400 11.5px/1.4 var(--mono);color:var(--helper)}
+.q-meta b{color:var(--accent-hi);font-weight:500}
+.q-text{margin-top:5px;font-size:16px;line-height:1.5;color:var(--ink)}
+.q-opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.opt{min-height:42px;padding:9px 14px;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);border-radius:var(--r);background:color-mix(in srgb,var(--accent) 9%,transparent);color:var(--accent-hi);font:500 14.5px/1.3 var(--sans);text-align:left;max-width:100%;overflow-wrap:anywhere}
+.opt:hover{background:color-mix(in srgb,var(--accent) 17%,transparent)}
+.q-free{display:flex;gap:8px;margin-top:10px;align-items:flex-end}
+.q-free textarea{flex:1;min-width:0}
+.q-free .btn{min-height:42px}
+.contract-box{padding:12px 14px;border:1px solid var(--line-soft);border-radius:var(--r);background:rgba(0,0,0,.22)}
+.err-text{font-size:15px;color:var(--burgundy-hi);overflow-wrap:anywhere}
+.pv-open{display:flex;align-items:center;justify-content:space-between;gap:6px 14px;flex-wrap:wrap;min-height:54px;padding:12px 14px;border:1px solid var(--green);border-radius:var(--r);background:rgba(95,155,114,.13);color:var(--green-hi);text-decoration:none}
+.pv-open:hover{background:rgba(95,155,114,.21)}
+.pv-open .st{font-size:13px}
+.pv-host{font:500 14px/1.3 var(--mono);color:var(--ink);overflow-wrap:anywhere}
+.logins ul{list-style:none;padding:0;margin-top:6px;font:400 13px/1.55 var(--mono);color:var(--ink-2)}
+.logins li{overflow-wrap:anywhere}
+.logins li+li{margin-top:2px}
+.pv-until{font-size:14px;color:var(--ink-2)}
+.pv-until b{font-family:var(--mono);font-weight:500}
+.pv-note{font-size:13.5px;color:var(--muted)}
+.pv-err{display:block;margin-top:6px;font:400 12.5px/1.5 var(--mono);color:var(--burgundy-hi);overflow-wrap:anywhere}
+.confirm{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid rgba(193,85,107,.55);border-radius:var(--r);background:rgba(193,85,107,.07)}
+.confirm>span{font-size:14.5px;color:var(--burgundy-hi)}
+.confirm.calm{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.confirm.calm>span{color:var(--ink)}
+.opt.pick{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.opt .pick-tag{display:inline-block;margin-left:8px;padding:0 5px;border:1px solid color-mix(in srgb,var(--accent) 70%,transparent);border-radius:2px;font:500 10px/1.55 var(--mono);letter-spacing:.08em;text-transform:uppercase;vertical-align:1px;white-space:nowrap}
+/* discussion: design rounds before a plan */
+.blk.dz.you{border-color:color-mix(in srgb,var(--accent) 42%,transparent);background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.blk.dz.you::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;height:2px;border-radius:var(--r) var(--r) 0 0;background:linear-gradient(90deg,var(--accent),transparent 80%)}
+.blk.dz .blk-top .st{font-size:12px}
+.dz-cost{font:400 11.5px/1.3 var(--mono);color:var(--helper)}
+.dz-state>*+*{margin-top:8px}
+.dz-state>.dz-sub{margin-top:4px}
+.dz-line{font-size:14.5px;line-height:1.5;color:var(--ink-2)}
+.dz-sub{margin-top:4px;font-size:13px;line-height:1.5;color:var(--muted)}
+.dz-focus{font-size:13.5px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.dz-focus .label{margin-right:6px;font-size:10.5px}
+.dz-round{padding-top:14px;border-top:1px solid var(--line-soft)}
+.dz-round>*+*{margin-top:8px}
+.dz-rh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font:400 11.5px/1.4 var(--mono);color:var(--helper)}
+.dz-rh h4{font:500 18px/1.2 var(--serif);letter-spacing:-.005em;color:var(--ink)}
+.dz-rh>span::before{content:"·";margin-right:10px;color:#6b6b74}
+.dz-rh .tag.ok{color:var(--green-hi);border-color:rgba(95,155,114,.5)}
+.dz-sum{font-size:14.5px;line-height:1.55;color:var(--ink-2);white-space:pre-line;overflow-wrap:anywhere}
+.dz-sum.clamp{max-height:calc(14.5px * 1.55 * 8);overflow:hidden}
+.dz-sum.clamp.cut{-webkit-mask-image:linear-gradient(180deg,#000 72%,transparent);mask-image:linear-gradient(180deg,#000 72%,transparent)}
+.q-why{margin-top:4px;font-size:14px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.dz-more{margin-top:2px!important;font-size:13px}
+.dz-btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.dz-btns .btn{text-transform:none;letter-spacing:.02em;font-size:12.5px}
+.dz-check{font:400 12px/1.5 var(--mono);color:var(--helper);overflow-wrap:anywhere}
+.dz-check ul{margin-top:2px;padding-left:16px}
+.dz-qs{padding-top:14px;border-top:1px solid color-mix(in srgb,var(--accent) 22%,transparent)}
+.dz-qs>*+*{margin-top:12px}
+.dz-step{display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.dz-next{display:flex;flex-direction:column;gap:7px}
+.dz-earlier{padding-top:16px;border-top:1px solid var(--line-soft)}
+.dz-earlier>.label{display:block}
+.dz-earlier .dz-round{border-top:0;padding-top:10px}
+.dz-earlier .dz-round+.dz-round{border-top:1px solid var(--line-soft);padding-top:14px;margin-top:14px}
+.changes{display:flex;flex-direction:column;gap:8px}
+.settings{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end;padding-top:14px;border-top:1px solid var(--line-soft)}
+.set{display:flex;flex-direction:column;gap:6px;min-width:0}
+.notebox{display:flex;flex-direction:column;gap:6px}
+.note-row{display:flex;gap:8px;align-items:flex-end}
+.note-row textarea{flex:1;min-width:0}
+.note-row .btn{min-height:42px}
+.tabs-wrap{margin-top:24px}
+.tabstrip{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:none}
+.tabstrip::-webkit-scrollbar{display:none}
+.tabstrip [role="tab"]{flex:none;min-height:42px;padding:8px 12px;margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font:500 13.5px/1 var(--sans);white-space:nowrap}
+.tabstrip [role="tab"]:hover{color:var(--ink-2)}
+.tabstrip [role="tab"][aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink-2)}
+.tabstrip [role="tab"]:focus-visible{outline-offset:-2px}
+.tabstrip .cnt{margin-left:6px;font:500 11px/1 var(--mono);color:var(--helper)}
+.tabpanel{padding-top:18px}
+.tabpanel>*+*{margin-top:14px}
+.empty-note{font:italic 400 16px/1.5 var(--serif);color:var(--helper)}
+.verdict-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.tl{list-style:none;padding:0}
+.ev{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.ev:first-child{padding-top:0}
+.ev-when{font:400 12px/1.5 var(--mono);color:var(--helper)}
+.ev-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.ev-who{font:600 13px/1.4 var(--sans);color:var(--ink-2)}
+.ev-type{font:400 11px/1.4 var(--mono);color:var(--helper)}
+.ev-text{display:block;margin-top:2px;font-size:14px;line-height:1.5;color:var(--ink-2);overflow-wrap:anywhere;white-space:pre-line}
+.ev[data-type="question"] .ev-type,.ev[data-type="escalate"] .ev-type,.ev[data-type="feedback"] .ev-type{color:var(--gold-hi)}
+.ev[data-type="verdict"] .ev-type,.ev[data-type="answer"] .ev-type,.ev[data-type="decision"] .ev-type{color:var(--green-hi)}
+.ev[data-type="preview"] .ev-type,.ev[data-type="discussion"] .ev-type,.ev[data-type="designer"] .ev-type{color:var(--violet-hi)}
+.qa-q,.qa-d{padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.qa-q:first-of-type,.qa-d:first-of-type{padding-top:4px}
+.qa-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font:400 11.5px/1.4 var(--mono);color:var(--helper)}
+.qa-meta b{color:var(--ink-2);font-weight:500}
+.qa-q .md{margin-top:5px}
+.qa-opts{margin-top:5px;font-size:13px;color:var(--helper)}
+.qa-a{margin-top:6px;font-size:14.5px;color:var(--green-hi)}
+.qa-a .who{color:var(--helper);font:400 11.5px/1.4 var(--mono)}
+.qa-d p{font-size:14.5px;color:var(--ink-2);margin-top:4px}
+.qa-h{font:500 11px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--helper)}
+.runs>*+*{margin-top:12px}
+.run{padding:12px 14px;border:1px solid var(--line-soft);border-radius:var(--r);background:var(--panel)}
+.run-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;font-size:13px}
+.run-top b{font:600 13px/1 var(--mono)}
+.logs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.logs .btn{text-transform:none;letter-spacing:.02em;font-size:12px}
+.gate .checks{list-style:none;padding:0;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 16px}
+.gate .checks li{display:inline-flex;gap:8px;align-items:baseline;font-size:12.5px}
+
+/* ---- modals: new item, log ---- */
+.modal{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:24px;background:rgba(4,4,6,.74)}
+.sheet{width:min(560px,100%);max-height:calc(100dvh - 48px);overflow:auto;padding:20px 22px 22px;background:#101013;border:1px solid var(--line);border-radius:var(--r)}
+.sheet>*+*{margin-top:16px}
+.sheet-head{display:flex;align-items:center;gap:10px}
+.sheet-head h2{flex:1;font:500 26px/1.15 var(--serif);letter-spacing:-.01em}
+.fs{border:0;margin:0;padding:0;min-width:0}
+.fs legend,.fld>.label{display:block;margin-bottom:7px;padding:0}
+.fld{display:block}
+.segr{display:grid;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.segr.four{grid-template-columns:repeat(4,1fr)}
+.segr.three{grid-template-columns:repeat(3,1fr)}
+.segr label{position:relative;min-width:0}
+.segr label+label{border-left:1px solid var(--line)}
+.segr input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.segr span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:0 6px;border-bottom:2px solid transparent;color:var(--muted);font:500 14px/1.2 var(--sans);cursor:pointer;white-space:nowrap}
+.segr span small{margin-left:6px;font:400 11px/1 var(--mono);color:var(--helper)}
+.segr label:hover span{color:var(--ink-2);background:var(--panel)}
+.segr input:checked+span{background:rgba(var(--t),.08);color:var(--ink);border-bottom-color:var(--gold)}
+.segr input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-2px}
+.check{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line-soft);border-radius:var(--r);cursor:pointer}
+.check input{flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:var(--gold)}
+.check b{display:block;font-weight:500;color:var(--ink)}
+.check small{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--muted)}
+.sheet-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.sheet-foot .btn{min-height:42px}
+.sheet.log{width:min(1000px,100%);height:min(80dvh,820px);display:flex;flex-direction:column;padding:0}
+.sheet.log>*+*{margin-top:0}
+.log-head{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px 10px 18px;border-bottom:1px solid var(--line-soft)}
+.log-head h2{font:600 14px/1.3 var(--mono);color:var(--ink);overflow-wrap:anywhere}
+.log-head .sub{font:400 12px/1.3 var(--mono);color:var(--helper)}
+.logpre{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;font:400 12.5px/1.6 var(--mono);color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.logpre.err{color:var(--burgundy-hi)}
+
+/* ---- dictation: a mic inside the text box (only where the browser has speech recognition) ---- */
+.tbox{position:relative;min-width:0}
+.tbox>textarea{width:100%}
+.voice .tbox>textarea{padding-right:44px;resize:none}
+.voice .tbox.two>textarea{padding-right:78px}
+.mic,.vlang{position:absolute;bottom:4px;display:grid;place-items:center;height:34px;padding:0;border:1px solid transparent;border-radius:var(--r);background:transparent;color:var(--helper)}
+.mic{right:4px;width:34px}
+.vlang{right:40px;width:32px;font:500 10.5px/1 var(--mono);letter-spacing:.06em}
+.mic:hover,.vlang:hover{color:var(--ink-2);background:var(--tile)}
+.mic[aria-pressed="true"]{color:var(--gold-hi);border-color:color-mix(in srgb,var(--gold) 65%,transparent);background:rgba(232,163,61,.16);animation:rec 1.6s ease-in-out infinite}
+.mic[aria-pressed="true"] svg{filter:drop-shadow(0 0 4px rgba(232,163,61,.7))}
+.tbox:has(.mic[aria-pressed="true"])>textarea{border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
+@keyframes rec{0%,100%{box-shadow:0 0 0 0 rgba(232,163,61,0)}50%{box-shadow:0 0 0 4px rgba(232,163,61,.22)}}
+.chat-form .tbox,.q-free .tbox,.note-row .tbox{flex:1 1 auto;min-width:0}
+
+/* ---- toasts ---- */
+.toasts{position:fixed;z-index:90;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(480px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 14px;border:1px solid var(--line);border-radius:var(--r);background:#17171b;color:var(--ink-2);font-size:14px;line-height:1.45;pointer-events:auto;animation:toast .18s ease-out}
+.toast .toast-msg{flex:1;min-width:0;overflow-wrap:anywhere;padding-top:1px}
+.toast.ok{border-color:rgba(95,155,114,.5)}
+.toast.error{border-color:rgba(193,85,107,.7);color:var(--burgundy-hi);background:#1b1215}
+@media (min-width:701px){.toasts{left:var(--g);transform:none;width:min(420px,calc(100vw - 32px));bottom:20px}}
+.toast-x{flex:none;width:28px;height:28px;margin:-4px 0;border:0;background:none;color:var(--helper);font-size:18px;line-height:1}
+@keyframes toast{from{transform:translateY(6px);opacity:0}}
+
+/* ---- desktop and tablet: app shell, every column scrolls on its own ---- */
+@media (min-width:701px){
+  .only-phone{display:none!important}
+  html,body{height:100%;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  .bar{flex:none}
+  .app{flex:1 1 auto;min-height:0;display:flex}
+  .main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .board{flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden}
+  .parked{flex:none}
+  .chat{flex:0 0 var(--chatw);width:var(--chatw)}
+}
+@container board (max-width:1160px){
+  .board{grid-template-columns:repeat(var(--n,6),236px);scroll-snap-type:x proximity}
+  .col{scroll-snap-align:start}
+}
+@media (min-width:1100px){
+  body.chat-on .drawer{right:var(--chatw)}
+}
+@media (max-width:1180px) and (min-width:701px){ .proj:not(.multi){display:none} }
+@media (max-width:1000px) and (min-width:701px){
+  .meter .m-bar{display:none}
+  .live span{display:none}
+  .live[data-state="reconnecting"] span{display:inline}
+}
+
+/* ---- phones ---- */
+@media (max-width:700px){
+  :root{--f1:15px}
+  .only-desk{display:none!important}
+  .bar .in{flex-wrap:wrap;column-gap:6px;row-gap:6px;padding-top:6px;padding-bottom:8px}
+  .brand{order:1}
+  .proj,.bar .sp{display:none}
+  .proj.multi{display:block;order:9;flex:1 1 100%;padding-left:0;border-left:0}
+  .proj.multi .projsel{width:100%;max-width:none;min-height:40px}
+  .live{order:2}
+  .live span{display:none}
+  .live[data-state="reconnecting"] span{display:inline}
+  .runchip{order:3;flex:1 1 0;max-width:none;min-height:40px;padding:5px 8px;font-size:11.5px;gap:7px}
+  #btn-new{order:4} #btn-chat{order:5}
+  .topbtn{min-width:40px;min-height:40px;padding:0 10px}
+  .topbtn .lbl{display:none}
+  .brk{display:block;order:6;flex-basis:100%;height:0}
+  .meters{order:7}
+  .pvs{order:8;flex:1 1 auto;flex-wrap:wrap;overflow:visible}
+  .meter,.pvchip,.labchip{min-height:40px}
+  /* compact on phones: the word, with its state as a corner dot (like the chat button's) */
+  .labchip{order:8;position:relative;justify-content:center;min-width:40px;padding:4px 9px}
+  .labchip .lt{display:none}
+  .labchip .dot,.labchip[data-tone] .dot{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border:2px solid var(--page)}
+  .labchip[data-tone="off"] .dot{display:none}
+  .mic{width:40px;height:40px;right:1px;bottom:1px}
+  .vlang{width:36px;height:40px;right:41px;bottom:1px}
+  .voice .tbox>textarea{padding-right:46px}
+  .voice .tbox.two>textarea{padding-right:82px}
+  .meter .m-bar{display:none}
+  .btn{min-height:40px}
+  .branch .copy,.seg>button,.newmsg{min-height:40px}
+  .toast-x{width:40px;height:40px;margin:-10px -4px -10px 0}
+  .linkbtn{display:inline-flex;align-items:center;min-height:40px;padding:0 6px}
+  .tabs{display:grid;grid-template-columns:repeat(var(--n,6),minmax(0,1fr));gap:4px;position:sticky;top:var(--barh);z-index:30;padding:6px var(--gr) 7px var(--g);background:rgba(9,9,11,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:50px;padding:4px 2px;border:1px solid var(--line-soft);border-radius:var(--r);background:transparent;color:var(--helper)}
+  .tab .n{font:600 16px/1 var(--mono);color:var(--ink-2)}
+  .tab .tl-full,.tab .tl-short{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 10px/1.1 var(--mono);letter-spacing:.05em;text-transform:uppercase}
+  .tab .tl-full{display:none}
+  .tab[aria-selected="true"]{border-color:rgba(var(--t),.3);background:rgba(var(--t),.07);color:var(--ink)}
+  .tab:not(.has) .n{color:var(--helper)}
+  .tab.you.has{border-color:rgba(232,163,61,.5);color:var(--gold-hi);background:rgba(232,163,61,.06)}
+  .tab.you.has .n{color:var(--gold);text-shadow:0 0 10px rgba(232,163,61,.55)}
+  .tab.you.has[aria-selected="true"]{background:rgba(232,163,61,.14)}
+  .tab:focus-visible{outline-offset:-2px}
+  .board{display:block;padding:12px var(--gr) 20px var(--g)}
+  .col{display:none;border:0;background:none}
+  .col.on{display:block}
+  .col.you::before{display:none}
+  .col.you{background:none}
+  .col-head{padding:0 0 10px;border:0}
+  .col-title{display:none}
+  .col-hint{white-space:normal;font-size:13px}
+  .col-body{overflow:visible;padding:0;gap:10px}
+  .card{padding:12px 13px}
+  .card.blocked{padding-left:12px}
+  .c-title{font-size:15px}
+  .c-needs{font-size:14px}
+  .parked{margin-bottom:24px}
+  .parked-list{grid-template-columns:1fr;max-height:none}
+  .chat{position:fixed;inset:0;z-index:52;border:0;background:var(--page);padding-top:env(safe-area-inset-top,0px)}
+  .chat-head{padding:6px var(--gr) 6px var(--g)}
+  .chat-head h2{flex:1}
+  .chat-log{padding:14px var(--gr) 10px var(--g)}
+  .chat-form{padding:10px var(--gr) calc(10px + env(safe-area-inset-bottom,0px)) var(--g)}
+  .chat-md{font-size:15px}
+  .msg{max-width:92%}
+  .drawer{z-index:56;top:0;left:0;width:auto;border:0;background:var(--page);padding-top:env(safe-area-inset-top,0px)}
+  .dr-head{padding:6px var(--gr) 6px var(--g)}
+  .dr-head .back{order:-1;margin-left:0}
+  .dr-body{padding:14px var(--gr) calc(56px + env(safe-area-inset-bottom,0px)) var(--g)}
+  .dr-title{font-size:23px}
+  .blk{padding:13px 12px 14px}
+  .q-free,.note-row{flex-direction:column;align-items:stretch}
+  .ev{grid-template-columns:62px minmax(0,1fr);gap:10px}
+  .modal{padding:0;place-items:stretch;background:var(--page)}
+  .sheet{width:auto;max-height:none;height:100%;border:0;border-radius:0;padding:calc(10px + env(safe-area-inset-top,0px)) var(--gr) calc(20px + env(safe-area-inset-bottom,0px)) var(--g)}
+  .sheet.log{height:100%;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+  .sheet-head h2{font-size:24px}
+  .segr span small{display:none}
+  .menu{top:calc(var(--barh) + 4px)}
+  html.lock,html.lock body{overflow:hidden}
+  .toasts{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:379px){ .runchip .caret{display:none} }
+@media (max-width:419px){ .dr-head .dr-verdict{display:none} }
+@media (min-width:540px) and (max-width:700px){
+  .tab .tl-full{display:block}
+  .tab .tl-short{display:none}
+  .tab .tl-full{font-size:9.5px;letter-spacing:.02em}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="bar" id="bar">
+  <div class="in">
+    <a class="brand" href="#" aria-label="hqrCrew board"><span aria-hidden="true">▚</span>hqrCrew</a>
+    <span class="proj" id="proj" hidden></span>
+    <button type="button" class="runchip" id="runchip" data-act="menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="runmenu"><i class="dot" aria-hidden="true"></i><span class="txt" id="runtxt">Runner</span><span class="caret" aria-hidden="true">▾</span></button>
+    <div class="meters" id="meters"></div>
+    <button type="button" class="labchip" id="labchip" data-act="lab-menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="labmenu" hidden><i class="dot" aria-hidden="true"></i><span>Lab</span><span class="lt" id="labtxt"></span></button>
+    <div class="pvs" id="pvs"></div>
+    <span class="grow sp"></span>
+    <span class="live" id="live" data-state="connecting" role="status"><i aria-hidden="true"></i><span>connecting</span></span>
+    <button type="button" class="btn topbtn" id="btn-new" data-act="new" aria-label="New item" title="New item (N)"><span class="ico" aria-hidden="true">+</span><span class="lbl">New</span></button>
+    <button type="button" class="btn topbtn" id="btn-chat" data-act="chat" aria-label="Chat with the lead" title="Chat with the lead (C)" aria-expanded="false" aria-controls="chat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H10l-6 4z"/></svg><span class="lbl">Chat</span><i class="cdot" aria-hidden="true"></i></button>
+    <span class="brk" aria-hidden="true"></span>
+  </div>
+</header>
+
+<div class="app" id="app">
+  <main class="main" id="main" aria-label="Board">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Board columns"></div>
+    <div class="board" id="board"></div>
+    <details class="parked" id="parked" hidden>
+      <summary><span>Parked</span> <b id="parked-n">0</b> <span class="ph">set aside, not in the queue</span></summary>
+      <div class="parked-list" id="parked-list"></div>
+    </details>
+  </main>
+
+  <aside class="chat" id="chat" aria-labelledby="chat-h" hidden>
+    <div class="chat-head">
+      <button type="button" class="ibtn only-phone" data-act="close-chat" aria-label="Back to the board">←</button>
+      <h2 id="chat-h">Lead</h2>
+      <span class="st" id="lead-st">idle</span>
+      <span class="grow"></span>
+      <span class="chat-meta" id="lead-meta"></span>
+      <button type="button" class="ibtn only-desk" data-act="close-chat" aria-label="Close the chat">×</button>
+    </div>
+    <div class="chat-log" id="chat-log">
+      <div class="msgs" id="msgs" role="log" aria-live="polite" aria-label="Messages"></div>
+      <div class="typing" id="typing" hidden></div>
+      <div class="pend" id="pend"></div>
+    </div>
+    <button type="button" class="newmsg" id="newmsg" data-act="newmsg" hidden>New messages ↓</button>
+    <form class="chat-form" id="chat-form">
+      <label class="sr" for="chat-in">Message the lead</label>
+      <div class="tbox" id="chat-box"><textarea id="chat-in" rows="1" placeholder="Message the lead" data-draft="chat" enterkeyhint="send" autocomplete="off"></textarea></div>
+      <button type="submit" class="btn acc solid" data-zone="amber">Send</button>
+    </form>
+    <p class="chat-hint only-desk">Enter sends · Shift+Enter starts a new line · you can write while the lead works</p>
+  </aside>
+</div>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="false" aria-labelledby="dr-title" hidden>
+  <div class="dr-head" id="dr-head"></div>
+  <div class="dr-body" id="dr-body"></div>
+</aside>
+
+<div class="menu" id="runmenu" role="dialog" aria-label="Night-shift runner" hidden></div>
+<div class="menu" id="labmenu" role="dialog" aria-label="Lab: today's app with the demo data" hidden></div>
+
+<div class="modal" id="new-modal" hidden>
+  <form class="sheet" id="new-form" role="dialog" aria-modal="true" aria-labelledby="new-h" novalidate>
+    <div class="sheet-head">
+      <h2 id="new-h">New item</h2>
+      <button type="button" class="ibtn" data-act="close-top" aria-label="Close">×</button>
+    </div>
+    <label class="fld" for="new-project" id="new-proj-wrap" hidden><span class="label">Project</span>
+      <select id="new-project" name="project"></select>
+    </label>
+    <fieldset class="fs">
+      <legend class="label">Type</legend>
+      <div class="segr four">
+        <label><input type="radio" name="type" value="bug" checked><span>Bug</span></label>
+        <label><input type="radio" name="type" value="feature"><span>Feature</span></label>
+        <label><input type="radio" name="type" value="idea"><span>Idea</span></label>
+        <label><input type="radio" name="type" value="chore"><span>Chore</span></label>
+      </div>
+    </fieldset>
+    <label class="fld" for="new-title"><span class="label">Title</span>
+      <input type="text" id="new-title" name="title" maxlength="200" autocomplete="off" placeholder="What is it, in one line" required>
+    </label>
+    <div class="fld"><label class="label" for="new-body">Details</label>
+      <div class="tbox" id="new-body-box"><textarea id="new-body" name="body" rows="5" placeholder="What happens, where, and what you expected. Links and file names help."></textarea></div>
+    </div>
+    <fieldset class="fs">
+      <legend class="label">Priority</legend>
+      <div class="segr three">
+        <label><input type="radio" name="priority" value="1"><span>P1<small>high</small></span></label>
+        <label><input type="radio" name="priority" value="2" checked><span>P2<small>normal</small></span></label>
+        <label><input type="radio" name="priority" value="3"><span>P3<small>low</small></span></label>
+      </div>
+    </fieldset>
+    <label class="check" for="new-discuss">
+      <input type="checkbox" id="new-discuss" name="discuss">
+      <span><b>Discuss first</b><small>A designer drafts a page with options, mockups and numbered decisions. You answer and accept a round; only then does the lead plan the build.</small></span>
+    </label>
+    <label class="check" for="new-shape" id="new-shape-wrap">
+      <input type="checkbox" id="new-shape" name="shape" checked>
+      <span><b>Let the lead shape it</b><small>The lead reads the code, asks only what you must decide, and writes the contract.</small></span>
+    </label>
+    <div class="sheet-foot">
+      <button type="button" class="btn" data-act="close-top">Cancel</button>
+      <button type="submit" class="btn acc solid" id="new-submit" data-zone="amber">Add bug</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal" id="log-modal" hidden>
+  <div class="sheet log" role="dialog" aria-modal="true" aria-labelledby="log-h">
+    <div class="log-head">
+      <div class="grow" style="min-width:0"><h2 id="log-h">Log</h2><div class="sub" id="log-sub"></div></div>
+      <button type="button" class="btn" data-act="log-refresh">Refresh</button>
+      <button type="button" class="btn" data-act="log-more" id="log-more">Show more</button>
+      <button type="button" class="ibtn" data-act="log-close" id="log-close" aria-label="Close the log">×</button>
+    </div>
+    <pre class="logpre" id="log-pre" tabindex="0"></pre>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<noscript><p style="padding:24px;position:relative;z-index:2">The crew board needs JavaScript.</p></noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= helpers ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+// Build DOM safely: strings become text nodes, attributes go through setAttribute.
+function add(el, kids) {
+  for (const k of kids) {
+    if (k == null || k === false || k === '') continue;
+    if (Array.isArray(k)) add(el, k);
+    else el.append(k instanceof Node ? k : String(k));
+  }
+}
+// replaceChildren() would print null/false as text; this skips them like h() does.
+function fill(el, ...kids) { el.replaceChildren(); add(el, kids); return el; }
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) for (const key of Object.keys(attrs)) {
+    const v = attrs[key];
+    if (v == null || v === false) continue;
+    if (key === 'class') el.className = v;
+    else if (key === 'value') el.value = v;
+    else if (v === true) el.setAttribute(key, '');
+    else el.setAttribute(key, String(v));
+  }
+  add(el, kids);
+  return el;
+}
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const ss = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+};
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+function parse(s) { try { return JSON.parse(s); } catch { return null; } }
+function autosize(el) {
+  if (!el || el.tagName !== 'TEXTAREA') return;
+  el.style.height = 'auto';
+  const max = el.id === 'chat-in' ? 180 : 320;
+  el.style.height = Math.min(el.scrollHeight + 2, max) + 'px';
+}
+
+/* ================= time (in the server's time zone) ================= */
+let tz = 'Europe/Warsaw';
+const fmts = {};
+function dtf(opts) {
+  const k = tz + JSON.stringify(opts);
+  if (!fmts[k]) {
+    try { fmts[k] = new Intl.DateTimeFormat('en-GB', { timeZone: tz, ...opts }); }
+    catch { fmts[k] = new Intl.DateTimeFormat('en-GB', opts); }
+  }
+  return fmts[k];
+}
+const toDate = (iso) => { const d = new Date(iso); return isNaN(d) ? null : d; };
+const clock = (d) => dtf({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+const dayKey = (d) => dtf({ year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+// "20:19" today, "Tue 20:19" within a week, "Tue 12 Oct 20:19" further away.
+function when(iso) {
+  const d = toDate(iso); if (!d) return '';
+  const now = new Date();
+  if (dayKey(d) === dayKey(now)) return clock(d);
+  const wd = dtf({ weekday: 'short' }).format(d);
+  if (Math.abs(d - now) < 6.5 * 864e5) return wd + ' ' + clock(d);
+  return wd + ' ' + dtf({ day: 'numeric', month: 'short' }).format(d) + ' ' + clock(d);
+}
+function fullTime(iso) {
+  const d = toDate(iso); if (!d) return '';
+  return dtf({ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d) + ' (' + tz + ')';
+}
+function dayLabel(iso) {
+  const d = toDate(iso); if (!d) return '';
+  const k = dayKey(d);
+  if (k === dayKey(new Date())) return 'Today';
+  if (k === dayKey(new Date(Date.now() - 864e5))) return 'Yesterday';
+  return dtf({ weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+}
+function ago(iso, short) {
+  const d = toDate(iso); if (!d) return '';
+  const s = Math.max(0, Math.round((Date.now() - d) / 1000));
+  const tail = short ? '' : ' ago';
+  if (s < 60) return short ? s + 's' : 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm' + tail;
+  if (s < 86400) { const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60); return hh + 'h' + (mm ? ' ' + mm + 'm' : '') + tail; }
+  return Math.round(s / 86400) + 'd' + tail;
+}
+function dur(ms) {
+  if (!(ms >= 0)) return '';
+  const m = Math.round(ms / 60000);
+  if (m < 1) return Math.max(1, Math.round(ms / 1000)) + 's';
+  if (m < 60) return m + ' min';
+  return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+}
+
+/* ================= safe markdown =================
+   Every piece of source text is escaped before any tag is added; links must be http(s).
+   md()/inline() return HTML strings that contain no unescaped source text. */
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESC[c]);
+const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\/[^\s<>"'`]+$/i.test(u.trim()) ? u.trim() : null);
+let TID_RE = /\b([A-Z]{2,5})-(\d{3,5})\b/g;
+function setPrefixes(projects) {
+  const ps = (projects || []).map((p) => p && p.prefix).filter((p) => /^[A-Za-z]{1,8}$/.test(p || ''));
+  if (ps.length) TID_RE = new RegExp('\\b(' + ps.join('|') + ')-(\\d{1,6})\\b', 'g');
+}
+function emph(s) {
+  return s
+    .replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(?=\S)([\s\S]*?\S)__/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\w])/g, '$1<em>$2</em>')
+    .replace(/(^|[^_\w])_(?=[^\s_])([^_\n]*?[^\s_])_(?![_\w])/g, '$1<em>$2</em>')
+    .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<del>$1</del>');
+}
+function anchor(url, labelHtml) { return '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + labelHtml + '</a>'; }
+function inline(raw) {
+  const slots = [];
+  const put = (html) => '\u0001' + (slots.push(html) - 1) + '\u0002';
+  let s = String(raw == null ? '' : raw).replace(/[\u0001\u0002]/g, '');
+  s = s.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (m, ticks, code) => put('<code>' + esc(code) + '</code>'));
+  s = s.replace(/\[([^\]\n]{1,300})\]\(\s*<?([^\s()<>]+)>?\s*\)/g, (m, label, url) => {
+    const u = safeUrl(url);
+    return u ? put(anchor(u, emph(esc(label)))) : m;
+  });
+  s = s.replace(/\bhttps?:\/\/[^\s<>"'`\u0001\u0002]+/gi, (url) => {
+    const trail = (url.match(/[.,;:!?)\]}*_]+$/) || [''])[0];
+    const u = url.slice(0, url.length - trail.length);
+    const ok = safeUrl(u);
+    return (ok && u.length > 10 ? put(anchor(ok, esc(ok))) : u) + trail;
+  });
+  s = esc(s);
+  s = emph(s);
+  s = s.replace(TID_RE, (m, p, n) => '<a class="tid" href="#' + p + '-' + n + '">' + p + '-' + n + '</a>');
+  for (let i = 0; i < 4 && /\u0001\d+\u0002/.test(s); i++) s = s.replace(/\u0001(\d+)\u0002/g, (m, n) => slots[+n] || '');
+  return s;
+}
+function splitRow(line) {
+  let s = line.trim();
+  if (s.startsWith('|')) s = s.slice(1);
+  if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+  const cells = []; let cur = '';
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '\\' && s[i + 1] === '|') { cur += '|'; i++; continue; }
+    if (s[i] === '|') { cells.push(cur.trim()); cur = ''; continue; }
+    cur += s[i];
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+const RX = {
+  fence: /^\s{0,3}(```|~~~)/,
+  head: /^\s{0,3}#{1,6}\s/,
+  hr: /^\s{0,3}([-*_])(\s*\1){2,}\s*$/,
+  item: /^(\s*)([-*+]|\d{1,3}[.)])\s+(.*)$/,
+  quote: /^\s{0,3}>/,
+  sep: /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/,
+};
+const isTable = (l, n) => l.includes('|') && RX.sep.test(n || '');
+const blockStart = (l, n) => RX.fence.test(l) || RX.head.test(l) || RX.hr.test(l) || RX.item.test(l) || RX.quote.test(l) || isTable(l, n);
+function itemHtml(t) {
+  const m = t.match(/^\[([ xX])\]\s+([\s\S]*)$/);
+  const body = (m ? m[2] : t).split('\n').map(inline).join('<br>');
+  return m ? '<span class="tick' + (m[1] === ' ' ? '' : ' on') + '" aria-hidden="true"></span>' + body : body;
+}
+function list(lines, i) {
+  const items = [];
+  while (i < lines.length) {
+    const l = lines[i];
+    const m = l.match(RX.item);
+    if (m) { items.push({ ind: m[1].length, ol: /\d/.test(m[2]), n: parseInt(m[2], 10) || 1, text: m[3] }); i++; continue; }
+    if (l.trim() && /^\s{2,}\S/.test(l) && items.length) { items[items.length - 1].text += '\n' + l.trim(); i++; continue; }
+    if (!l.trim() && i + 1 < lines.length && RX.item.test(lines[i + 1])) { i++; continue; }
+    break;
+  }
+  let html = '';
+  const stack = [];
+  for (const it of items) {
+    while (stack.length && it.ind < stack[stack.length - 1].ind) html += '</li></' + stack.pop().tag + '>';
+    let top = stack[stack.length - 1];
+    if (top && it.ind === top.ind && (it.ol ? 'ol' : 'ul') !== top.tag) { html += '</li></' + stack.pop().tag + '>'; top = stack[stack.length - 1]; }
+    if (!top || it.ind > top.ind) {
+      const tag = it.ol ? 'ol' : 'ul';
+      html += '<' + tag + (it.ol && it.n !== 1 ? ' start="' + it.n + '"' : '') + '>';
+      stack.push({ ind: it.ind, tag });
+    } else html += '</li>';
+    html += '<li>' + itemHtml(it.text);
+  }
+  while (stack.length) html += '</li></' + stack.pop().tag + '>';
+  return [html, i];
+}
+function md(src) {
+  const lines = String(src == null ? '' : src).replace(/\r\n?/g, '\n').replace(/\t/g, '    ').split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (!l.trim()) { i++; continue; }
+    if (RX.fence.test(l)) {
+      const fence = l.trim().slice(0, 3);
+      const buf = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith(fence)) buf.push(lines[i++]);
+      i++;
+      out.push('<pre class="code"><code>' + esc(buf.join('\n')) + '</code></pre>');
+      continue;
+    }
+    if (RX.head.test(l)) {
+      const m = l.match(/^\s*(#{1,6})\s+(.*?)\s*#*\s*$/);
+      const lvl = Math.min(6, m[1].length + 2);
+      out.push('<h' + lvl + '>' + inline(m[2]) + '</h' + lvl + '>');
+      i++;
+      continue;
+    }
+    if (RX.hr.test(l)) { out.push('<hr>'); i++; continue; }
+    if (isTable(l, lines[i + 1])) {
+      const head = splitRow(l);
+      const al = splitRow(lines[i + 1]).map((c) => (/^:-+:$/.test(c) ? 'center' : /-+:$/.test(c) ? 'right' : ''));
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].trim() && lines[i].includes('|')) rows.push(splitRow(lines[i++]));
+      const cell = (tag, txt, j) => '<' + tag + (al[j] ? ' style="text-align:' + al[j] + '"' : '') +
+        (tag === 'td' && /^\s*\d+(\.\d+)?\s*\/\s*10\s*$/.test(txt) ? ' class="n"' : '') + '>' + inline(txt) + '</' + tag + '>';
+      out.push('<div class="tbl"><table><thead><tr>' + head.map((c, j) => cell('th', c, j)).join('') + '</tr></thead><tbody>' +
+        rows.map((r) => '<tr>' + head.map((_, j) => cell('td', r[j] || '', j)).join('') + '</tr>').join('') + '</tbody></table></div>');
+      continue;
+    }
+    if (RX.quote.test(l)) {
+      const buf = [];
+      while (i < lines.length && lines[i].trim() && RX.quote.test(lines[i])) buf.push(lines[i++].replace(/^\s{0,3}>\s?/, ''));
+      out.push('<blockquote>' + md(buf.join('\n')) + '</blockquote>');
+      continue;
+    }
+    if (RX.item.test(l)) { const [html, ni] = list(lines, i); out.push(html); i = ni; continue; }
+    const buf = [l];
+    i++;
+    while (i < lines.length && lines[i].trim() && !blockStart(lines[i], lines[i + 1])) buf.push(lines[i++]);
+    out.push('<p>' + buf.map((x) => inline(x.trim())).join('<br>') + '</p>');
+  }
+  return out.join('');
+}
+// The one place that assigns HTML: the output of md()/inline() above.
+function mdEl(src, cls, inlineOnly) {
+  const el = document.createElement(inlineOnly ? 'span' : 'div');
+  el.className = (inlineOnly ? '' : 'md') + (cls ? ' ' + cls : '');
+  el.innerHTML = inlineOnly ? inline(src) : md(src);
+  return el;
+}
+
+/* ================= app state ================= */
+const S = {
+  state: null, stateErr: null,
+  chat: [], pending: [], seq: 0, lastDay: null, chatRendered: false,
+  lead: { busy: false, partial: '', tools: [] },
+  ticketId: null, ticket: null, ticketErr: null, ticketDirty: false,
+  tabs: {}, tabPicked: {}, drafts: {}, busy: new Set(),
+  confirm: null, changesOpen: false,
+  pvPending: {}, flash: {}, labPending: {},
+  dzOpen: {}, dzOver: {}, newDiscussSet: false,
+  boardTab: null, chatPanel: ls.get('crew.chat') === '1', chatPhone: false, unread: false,
+  projectFilter: ls.get('crew.project') || '',
+  live: 'connecting', log: null, lastFocus: null, newFocus: null, logFocus: null,
+};
+const mqPhone = matchMedia('(max-width: 700px)');
+const isPhone = () => mqPhone.matches;
+const TICKET_RE = /^[A-Za-z]{1,8}-\d{1,6}$/;
+
+const COL_SHORT = { inbox: 'Inbox', discuss: 'Talk', you: 'You', queue: 'Queue', building: 'Build', test: 'Test', done: 'Done' };
+const EMPTY = {
+  inbox: 'Nothing new. Add a bug, feature or idea with New.',
+  discuss: 'No design rounds. Tick Discuss first on a new idea or feature.',
+  you: 'Nothing needs you. The crew has what it needs.',
+  queue: 'The queue is empty. Approved work waits here for the night shift.',
+  building: 'Nothing is being built right now.',
+  test: 'Nothing to test yet. Verified work lands here.',
+  done: 'Nothing accepted yet.',
+};
+const WHO = { user: 'you', lead: 'lead', designer: 'designer', worker: 'coder', verifier: 'verifier', runner: 'runner' };
+const who = (r) => WHO[r] || r || '';
+const PRIO = { 1: 'high', 2: 'normal', 3: 'low' };
+const ACT_LABEL = {
+  runNow: 'Run now', top: 'Move to top', done: 'Mark done', retry: 'Retry', reopen: 'Reopen', park: 'Park',
+};
+const DONE = {
+  approve: 'plan approved. It is in the queue.',
+  queue: 'queued.',
+  runNow: 'runs next.',
+  top: 'moved to the top of the queue.',
+  done: 'marked done.',
+  changes: 'changes requested. It is back in the queue.',
+  retry: 'queued for another try.',
+  reopen: 'reopened. The lead picks it up again.',
+  park: 'parked.',
+  drop: 'dropped.',
+  priority: 'priority saved.',
+  approval: 'saved.',
+  note: 'note added.',
+  // These two read the ticket the server sends back.
+  discuss: (s) => { const n = s && s.discussion && s.discussion.pending && s.discussion.pending.round; return (n ? 'design round ' + n : 'the next design round') + ' is queued. The designer starts as soon as nothing else runs.'; },
+  accept: (s) => { const n = s && s.discussion && s.discussion.acceptedRound; return 'round ' + (n || '') + ' accepted. The lead plans the build.'; },
+};
+const ERR_LABEL = { limit: 'usage limit', auth: 'login needed', error: 'error' };
+
+function statusOf(s) {
+  const openUser = (s.questions || []).filter((q) => !q.answer && q.to === 'user').length;
+  switch (s.status) {
+    case 'inbox': return ['New', ''];
+    case 'discussing': {
+      const d = s.discussion || {};
+      return ['Discussing', { designing: 'yes pulse', ready: 'part', new: 'part', failed: 'risk' }[d.state] || ''];
+    }
+    case 'shaping': return ['Shaping', ''];
+    case 'waiting': return [openUser ? 'Waiting on you' : 'Waiting', 'part'];
+    case 'ready': return [s.approval === 'user' ? 'Plan ready' : 'Ready to queue', 'part'];
+    case 'queued': return ['Queued' + (s.runNow ? ' · run now' : ''), ''];
+    case 'building': return ['Building' + (s.job && s.job.step ? ' · ' + s.job.step : ''), 'yes pulse'];
+    case 'review': return ['Ready to test', 'yes'];
+    case 'blocked': return ['Blocked', 'risk'];
+    case 'parked': return ['Parked', 'no'];
+    case 'done': return ['Done', 'yes'];
+    case 'dropped': return ['Dropped', 'no'];
+    default: return [s.status || '?', ''];
+  }
+}
+const project = (key) => ((S.state && S.state.projects) || []).find((p) => p.key === key) || ((S.state && S.state.projects) || [])[0] || null;
+
+/* ================= api ================= */
+async function api(path, method = 'GET', body) {
+  const opt = { method, headers: { Accept: 'application/json' } };
+  if (method !== 'GET') {
+    opt.headers['X-Crew'] = '1';
+    opt.headers['Content-Type'] = 'application/json';
+    opt.body = JSON.stringify(body || {});
+  }
+  let res;
+  try { res = await fetch(path, opt); }
+  catch { throw new Error('Cannot reach the crew server. Check that crew serve is running.'); }
+  const type = res.headers.get('content-type') || '';
+  let data = null;
+  try { data = type.includes('application/json') ? await res.json() : await res.text(); } catch {}
+  if (!res.ok) throw new Error((data && data.error) || (typeof data === 'string' && data.trim().slice(0, 300)) || 'The server answered ' + res.status + '.');
+  return data;
+}
+const tpath = (id, rest = '') => '/api/tickets/' + encodeURIComponent(id) + rest;
+
+/* ================= toasts ================= */
+function toast(msg, kind = 'ok') {
+  const box = $('#toasts');
+  const x = h('button', { type: 'button', class: 'toast-x', 'aria-label': 'Dismiss' }, '×');
+  const el = h('div', { class: 'toast ' + kind }, h('span', { class: 'toast-msg' }, String(msg || '')), x);
+  x.addEventListener('click', () => el.remove());
+  // On a phone with the chat open, toasts sit above the message box, so the mic and Send stay reachable.
+  box.style.bottom = isPhone() && chatVisible() ? Math.round($('#chat-form').getBoundingClientRect().height) + 8 + 'px' : '';
+  box.append(el);
+  while (box.children.length > 3) box.firstElementChild.remove();
+  setTimeout(() => el.remove(), kind === 'error' ? 9000 : 3600);
+}
+
+/* ================= top bar ================= */
+function queueCount() {
+  const q = S.state && S.state.board && (S.state.board.columns || []).find((c) => c.key === 'queue');
+  return q ? q.tickets.length : 0;
+}
+function runnerStatus(r) {
+  if (!r) return { tone: 'idle', text: 'Runner', detail: '' };
+  const now = Date.now();
+  if (r.authProblem) return { tone: 'risk', text: 'Login needed', detail: (r.authEngine === 'codex' ? 'Codex' : 'Claude Code') + ' on the box is not logged in: ' + r.authProblem };
+  if (r.current) {
+    const c = r.current;
+    return { tone: 'run', text: [c.ticket, c.step, ago(c.startedAt, true)].filter(Boolean).join(' · '), detail: 'Working on ' + c.ticket + (c.run ? ' (' + c.run + ')' : '') + ', step ' + c.step + ', since ' + when(c.startedAt) + '.' + (r.mode === 'paused' ? ' Paused after this job.' : '') };
+  }
+  if (r.parkedUntil && new Date(r.parkedUntil).getTime() > now) return { tone: 'wait', text: 'Usage limit · back ' + when(r.parkedUntil), detail: 'Waiting for the usage limit to reset at ' + when(r.parkedUntil) + '.' + (r.parkReason ? ' (' + r.parkReason + ')' : '') };
+  if (r.mode === 'paused') return { tone: 'wait', text: 'Paused', detail: 'The runner starts no new jobs until you switch it to Night or Always.' };
+  const ready = r.inWindow || r.mode === 'always';
+  const q = queueCount();
+  if (ready && q && r.lastHold) return { tone: 'wait', text: 'Held · ' + r.lastHold, detail: 'The runner is holding back: ' + r.lastHold + '.' };
+  if (ready) return { tone: 'idle', text: 'Idle, ready', detail: q ? 'It starts the next queued ticket on its next check.' : 'The queue is empty.' };
+  const start = (String(r.window || '').match(/^\d{1,2}:\d{2}/) || [''])[0];
+  return { tone: 'idle', text: start ? 'Idle until ' + start : 'Idle', detail: 'The night shift runs ' + (r.window || 'at night') + '. Run now on a queued ticket starts it right away.' };
+}
+function meterEl(label, name, u) {
+  if (!u || typeof u.utilization !== 'number') return null;
+  const pct = Math.max(0, Math.min(100, Math.round(u.utilization * 100)));
+  const tone = pct >= 90 ? 'risk' : pct >= 75 ? 'wait' : '';
+  const title = name + ' usage ' + pct + '%' + (u.resetsAt ? ', resets ' + when(u.resetsAt) : '');
+  return h('button', { type: 'button', class: 'meter ' + tone, 'data-act': 'menu', 'data-label': label, title, 'aria-label': title },
+    h('span', { class: 'm-l' }, label),
+    h('span', { class: 'm-bar', 'aria-hidden': 'true' }, h('i', { style: 'width:' + pct + '%' })),
+    h('span', { class: 'm-v' }, pct + '%'));
+}
+// Re-rendering a container drops focus; put it back on the matching control.
+function keepFocus(root, fn) {
+  const ae = document.activeElement;
+  const sig = (el) => [el.tagName, el.dataset.act || '', el.dataset.mode || '', el.dataset.op || '', el.getAttribute('href') || '', el.dataset.label || ''].join('|');
+  const key = ae && root.contains(ae) && ae !== root ? sig(ae) : null;
+  fn();
+  if (!key) return;
+  const next = $$('button, a', root).find((el) => sig(el) === key);
+  if (next) next.focus({ preventScroll: true });
+}
+function renderBar() {
+  const st = S.state;
+  if (!st) return;
+  keepFocus($('#bar'), () => renderBarNow(st));
+  if (!$('#runmenu').hidden) keepFocus($('#runmenu'), renderMenu);
+  if (!$('#labmenu').hidden) keepFocus($('#labmenu'), renderLabMenu);
+}
+// The header is the app's, never a project's. One project: nothing here. Several: a picker that
+// filters the board ('' = all projects).
+function renderProjectPicker(st) {
+  const ps = (st.projects || []).filter((p) => p && p.key);
+  const box = $('#proj');
+  if (S.projectFilter && !ps.some((p) => p.key === S.projectFilter)) S.projectFilter = '';
+  box.classList.toggle('multi', ps.length > 1);
+  box.hidden = ps.length < 2;
+  if (ps.length < 2) {
+    box.replaceChildren();
+    return;
+  }
+  let sel = box.querySelector('select');
+  if (!sel) {
+    sel = h('select', { class: 'projsel', 'aria-label': 'Show project' });
+    sel.addEventListener('change', () => {
+      S.projectFilter = sel.value;
+      ls.set('crew.project', sel.value);
+      renderBoard();
+      renderLabChip();
+      if (!$('#labmenu').hidden) renderLabMenu();
+    });
+    box.replaceChildren(sel);
+  }
+  const want = [['', 'All projects'], ...ps.map((p) => [p.key, p.name || p.key])];
+  if (sel.options.length !== want.length || want.some(([v, t], i) => sel.options[i].value !== v || sel.options[i].textContent !== t)) {
+    sel.replaceChildren(...want.map(([v, t]) => h('option', { value: v }, t)));
+  }
+  sel.value = S.projectFilter;
+}
+function renderBarNow(st) {
+  renderProjectPicker(st);
+  const rs = runnerStatus(st.runner);
+  const chip = $('#runchip');
+  chip.dataset.tone = rs.tone;
+  $('#runtxt').textContent = rs.text;
+  chip.title = rs.detail || rs.text;
+  chip.setAttribute('aria-label', 'Runner: ' + rs.text + '. Open the runner menu.');
+  const u = (st.runner && st.runner.usage) || {};
+  $('#meters').replaceChildren(...[meterEl('5h', '5-hour', u.fiveHour), meterEl('wk', 'Weekly', u.sevenDay)].filter(Boolean));
+  renderLabChip();
+  $('#pvs').replaceChildren(...(st.previews || []).filter((x) => x && TICKET_RE.test(x.ticket || '')).map((x) => {
+    const up = x.state === 'up';
+    const t = up ? 'until ' + when(x.expiresAt) : x.state || '';
+    return h('a', { class: 'pvchip' + (up ? '' : ' busy'), href: '#' + x.ticket, title: 'Preview on slot ' + x.slot + ': ' + x.ticket + ', ' + (x.state || '') + (x.expiresAt ? ', stops at ' + when(x.expiresAt) : '') },
+      h('span', { class: 'st ' + (up ? 'yes' : 'part pulse'), 'aria-hidden': 'true' }),
+      h('span', null, 'S' + x.slot + ' ' + x.ticket),
+      h('span', { class: 'pv-t' }, t));
+  }));
+}
+function setLive(state) {
+  S.live = state;
+  const el = $('#live');
+  el.dataset.state = state;
+  el.querySelector('span').textContent = state;
+  el.title = state === 'live' ? 'Live updates are on' : state === 'reconnecting' ? 'Lost the live connection. Reconnecting…' : 'Connecting…';
+}
+
+/* ================= runner menu ================= */
+function renderMenu() {
+  const st = S.state;
+  const menu = $('#runmenu');
+  if (!st) { fill(menu, h('p', { class: 'muted' }, 'Loading…')); return; }
+  const r = st.runner || {};
+  const rs = runnerStatus(r);
+  const u = r.usage || {};
+  const parked = r.parkedUntil && new Date(r.parkedUntil).getTime() > Date.now();
+  const urow = (label, x) => {
+    if (!x || typeof x.utilization !== 'number') return [];
+    const pct = Math.round(x.utilization * 100);
+    return [h('span', null, label), h('span', { class: 'ub ' + (pct >= 90 ? 'risk' : pct >= 75 ? 'wait' : '') }, h('i', { style: 'width:' + Math.min(100, pct) + '%' })), h('span', null, pct + '%'),
+      h('span', { class: 'ur' }, x.resetsAt ? 'resets ' + when(x.resetsAt) : '')];
+  };
+  const mode = r.mode || 'night';
+  const hint = { night: 'Runs the queue in the night window, ' + (r.window || '') + '.', always: 'Runs the queue whenever there is work, day or night.', paused: 'Starts no new jobs. The current one finishes.' }[mode] || '';
+  const tonightN = r.tonight && r.tonight.jobs;
+  const facts = [
+    tonightN != null ? h('li', null, 'Tonight: ' + tonightN + (tonightN === 1 ? ' job' : ' jobs') + ' started') : null,
+    r.lastHold ? h('li', null, 'Last hold: ' + r.lastHold) : null,
+    st.heavy ? h('li', null, 'Heavy work running: ' + (st.heavy.what || 'a build')) : null,
+    st.lead ? h('li', null, 'Lead: ' + (st.lead.busy ? 'working' : 'idle') + (st.lead.turns ? ' · ' + st.lead.turns + (st.lead.turns === 1 ? ' turn' : ' turns') + ' · $' + Number(st.lead.costUsd || 0).toFixed(2) + ' this session' : '')) : null,
+  ].filter(Boolean);
+  fill(menu,
+    h('div', null,
+      h('p', { class: 'label' }, 'Night-shift runner'),
+      h('p', { class: 'rm-line', style: 'margin-top:8px' }, h('span', { class: 'st ' + ({ run: 'yes pulse', wait: 'part', risk: 'risk' }[rs.tone] || '') }, rs.text)),
+      rs.detail ? h('p', { class: 'rm-detail' }, rs.detail) : null),
+    h('div', null,
+      h('p', { class: 'label', id: 'rm-mode' }, 'Mode'),
+      h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'rm-mode', style: 'margin-top:8px' },
+        [['night', 'Night'], ['always', 'Always'], ['paused', 'Paused']].map(([m, l]) => h('button', { type: 'button', 'data-act': 'mode', 'data-mode': m, 'aria-pressed': mode === m ? 'true' : 'false' }, l))),
+      h('p', { class: 'rm-hint' }, hint)),
+    (u.fiveHour || u.sevenDay) ? h('div', null, h('p', { class: 'label' }, 'Claude usage'), h('div', { class: 'usage', style: 'margin-top:10px' }, urow('5-hour', u.fiveHour), urow('Week', u.sevenDay))) : null,
+    h('div', { class: 'rm-btns' },
+      h('button', { type: 'button', class: 'btn', 'data-act': 'wake' }, 'Check now'),
+      h('button', { type: 'button', class: 'btn' + (parked ? ' acc' : ''), 'data-zone': 'amber', 'data-act': 'clear-park', disabled: !parked, title: parked ? 'Let the runner try again before the reset' : 'Only when the runner waits for a usage reset' }, 'Clear usage park'),
+      r.authProblem ? h('button', { type: 'button', class: 'btn danger', 'data-act': 'clear-auth' }, 'Clear login problem') : null),
+    facts.length ? h('ul', { class: 'rm-facts' }, facts) : null,
+  );
+}
+function placeMenu(menuSel = '#runmenu', chipSel = '#runchip') {
+  const m = $(menuSel);
+  const r = $(chipSel).getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  m.style.top = Math.round(r.bottom + 6) + 'px';
+  m.style.left = Math.round(Math.max(12, Math.min(r.left, vw - m.offsetWidth - 12))) + 'px';
+}
+function openMenu() {
+  closeLab();
+  const m = $('#runmenu');
+  m.hidden = false;
+  $('#runchip').setAttribute('aria-expanded', 'true');
+  renderMenu();
+  placeMenu();
+  const first = m.querySelector('button[aria-pressed="true"]') || m.querySelector('button');
+  if (first) first.focus({ preventScroll: true });
+}
+function closeMenu(focusChip) {
+  const m = $('#runmenu');
+  if (m.hidden) return;
+  m.hidden = true;
+  $('#runchip').setAttribute('aria-expanded', 'false');
+  if (focusChip) $('#runchip').focus();
+}
+async function runnerPost(body, msg) {
+  try {
+    const r = await api('/api/runner', 'POST', body);
+    if (S.state && r && typeof r === 'object') S.state.runner = r;
+    renderBar();
+    if (msg) toast(msg);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ================= lab: today's app with the demo data ================= */
+function labList() {
+  const all = S.state && Array.isArray(S.state.lab) ? S.state.lab.filter((l) => l && l.project) : [];
+  return S.projectFilter ? all.filter((l) => l.project === S.projectFilter) : all;
+}
+// The server has picked up a start we asked for.
+const labHeard = (l, since) => !!l && ['starting', 'building', 'up', 'failed'].includes(l.state) && (!l.updated || Date.parse(l.updated) >= since - 3000);
+// down | asking (we asked, the server has said nothing yet) | starting | building | up | failed
+function labState(l) {
+  const since = S.labPending[l.project];
+  if (since && labHeard(l, since)) delete S.labPending[l.project];
+  let st = l.state || 'down';
+  if (st === 'up' && l.expiresAt && Date.parse(l.expiresAt) < Date.now()) st = 'down';
+  if (S.labPending[l.project] && !['starting', 'building', 'up'].includes(st)) st = 'asking';
+  return st;
+}
+const LAB_TEXT = { asking: 'Starting…', starting: 'Starting…', building: 'Building…', failed: 'Failed to start', down: 'Off' };
+const LAB_ST = { up: 'yes', asking: 'part pulse', starting: 'part pulse', building: 'part pulse', failed: 'risk', down: 'no' };
+const labUp = (l) => 'Up until ' + (l.expiresAt ? when(l.expiresAt) : '?');
+function renderLabChip() {
+  const chip = $('#labchip');
+  const L = labList();
+  chip.hidden = !L.length;
+  if (!L.length) { closeLab(); return; }
+  const sts = L.map(labState);
+  const top = ['failed', 'asking', 'starting', 'building', 'up', 'down'].find((x) => sts.includes(x)) || 'down';
+  const l = L[sts.indexOf(top)];
+  chip.dataset.tone = { up: 'up', asking: 'busy', starting: 'busy', building: 'busy', failed: 'bad' }[top] || 'off';
+  $('#labtxt').textContent = top === 'up' ? 'until ' + when(l.expiresAt) : top === 'asking' ? 'starting' : top === 'down' ? 'off' : top;
+  const p = L.length > 1 ? project(l.project) : null;
+  const label = 'Lab' + (p ? ' ' + (p.name || p.key) : '') + ': ' + (top === 'up' ? labUp(l) : LAB_TEXT[top]).toLowerCase().replace(/…$/, '');
+  chip.title = label;
+  chip.setAttribute('aria-label', label + '. Open the lab menu.');
+}
+function renderLabMenu() {
+  const menu = $('#labmenu');
+  if (!S.state) { fill(menu, h('p', { class: 'muted' }, 'Loading…')); return; }
+  const L = labList();
+  if (!L.length) { fill(menu, h('p', { class: 'muted' }, 'No project has lab settings.')); return; }
+  fill(menu, L.map((l) => labSection(l, L.length > 1)));
+}
+function labSection(l, multi) {
+  const p = project(l.project);
+  const st = labState(l);
+  const busy = S.busy.has('lab:' + l.project);
+  const url = safeUrl(l.url) || (p && p.lab ? safeUrl(p.lab.url) : null);
+  const logins = p && p.lab && Array.isArray(p.lab.logins) ? p.lab.logins.filter((x) => x && nonEmpty(x.email)) : [];
+  const btn = (op, label, cls) => h('button', { type: 'button', class: 'btn' + (cls ? ' ' + cls : ''), 'data-act': 'lab', 'data-op': op, 'data-project': l.project, disabled: busy }, label);
+  const kids = [h('div', null,
+    h('p', { class: 'label' }, 'Lab' + (multi && p ? ' · ' + (p.name || p.key) : '')),
+    h('p', { class: 'rm-line', style: 'margin-top:8px' }, h('span', { class: 'st ' + LAB_ST[st] }, st === 'up' ? labUp(l) : LAB_TEXT[st])),
+    h('p', { class: 'rm-detail' }, "Today's app with a fresh copy of the demo data. The designer takes its screenshots there, and you can click around."))];
+  if (st === 'up') {
+    if (url) kids.push(h('a', { class: 'pv-open', href: url, target: '_blank', rel: 'noopener noreferrer', 'data-key': 'lab-open' }, h('span', { class: 'st yes' }, 'Open'), h('span', { class: 'pv-host' }, url.replace(/^https?:\/\//, '').replace(/\/$/, '') + ' ↗')));
+    kids.push(h('div', { class: 'lab-row' },
+      h('span', { class: 'pv-until' }, 'Stops at ', h('b', null, l.expiresAt ? when(l.expiresAt) : '?')),
+      h('span', { class: 'grow' }),
+      btn('extend', '+2 h'), btn('down', 'Stop', 'danger')));
+  } else if (st === 'asking' || st === 'starting' || st === 'building') {
+    kids.push(h('p', { class: 'rm-hint' }, (st === 'asking' ? 'Asked the server to start it. ' : l.startedAt ? 'Started ' + when(l.startedAt) + '. ' : '') + 'The first start installs and builds the app, about 5 minutes. This updates on its own.'));
+  } else {
+    if (st === 'failed' && nonEmpty(l.error)) kids.push(h('p', { class: 'pv-err' }, l.error));
+    kids.push(h('div', { class: 'lab-row' }, btn('up', st === 'failed' ? 'Try again' : 'Start lab', 'acc solid')),
+      h('p', { class: 'rm-hint' }, 'The first start installs and builds the app, about 5 minutes; later starts are quicker.'));
+  }
+  if (logins.length) {
+    kids.push(h('div', { class: 'logins' }, h('p', { class: 'label' }, 'Demo logins'),
+      h('ul', null, logins.map((x) => h('li', null, h('span', { class: 'role' }, x.role || ''), h('span', null, x.email))))));
+  }
+  if (nonEmpty(l.sha)) kids.push(h('p', { class: 'rm-hint' }, 'Code: the base branch at ' + l.sha.slice(0, 7) + '.'));
+  return h('section', { class: 'lab-sec', 'aria-label': 'Lab' + (p ? ', ' + (p.name || p.key) : '') }, kids);
+}
+function openLab() {
+  closeMenu();
+  const m = $('#labmenu');
+  m.hidden = false;
+  $('#labchip').setAttribute('aria-expanded', 'true');
+  renderLabMenu();
+  placeMenu('#labmenu', '#labchip');
+  const first = m.querySelector('a[href], button:not([disabled])');
+  if (first) first.focus({ preventScroll: true });
+}
+function closeLab(focusChip) {
+  const m = $('#labmenu');
+  if (m.hidden) return;
+  m.hidden = true;
+  $('#labchip').setAttribute('aria-expanded', 'false');
+  if (focusChip && !$('#labchip').hidden) $('#labchip').focus();
+}
+async function labOp(key, op) {
+  if (!key || !['up', 'down', 'extend'].includes(op)) return;
+  const bk = 'lab:' + key;
+  if (S.busy.has(bk)) return;
+  S.busy.add(bk);
+  renderBar();
+  try {
+    await api('/api/lab', 'POST', { project: key, op });
+    if (op === 'up') {
+      const since = (S.labPending[key] = Date.now());
+      toast('Starting the lab. The first start builds the app, about 5 minutes.');
+      setTimeout(() => labWatch(key, since), 30000);
+    } else toast(op === 'down' ? 'The lab is stopped.' : 'The lab runs two more hours.');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    S.busy.delete(bk);
+    renderBar();
+    scheduleState();
+  }
+}
+// POST /api/lab {op:"up"} answers 202 before the work starts, and the server records nothing until it has
+// fetched the code; a failure before that never reaches the board. If it starts late, the lab event shows it.
+async function labWatch(key, since) {
+  if (S.labPending[key] !== since) return;
+  try {
+    const st = await api('/api/state');
+    if (labHeard((st.lab || []).find((x) => x && x.project === key), since)) { delete S.labPending[key]; renderBar(); return; }
+  } catch {}
+  if (S.labPending[key] !== since) return;
+  delete S.labPending[key];
+  renderBar();
+  toast('The lab has not reported back after 30 s. If it does not start, the crew serve log says why.', 'error');
+}
+
+/* ================= board ================= */
+function verdictEl(v, cls) {
+  if (!v || !v.result) return null;
+  const ok = v.result === 'PASS';
+  return h('span', { class: (cls || 'st') + ' ' + (ok ? 'yes' : 'risk') }, v.result + (v.score != null ? ' ' + v.score + '/10' : ''));
+}
+function previewMeta(pv) {
+  if (!pv || !pv.state) return null;
+  if (pv.state === 'up') return h('span', { class: 'ok' }, '● up until ' + when(pv.expiresAt));
+  if (pv.state === 'starting') return h('span', { class: 'warn' }, '● preview starting');
+  if (pv.state === 'building') return h('span', { class: 'warn' }, '● preview building');
+  if (pv.state === 'failed') return h('span', { class: 'bad' }, '✕ preview failed');
+  if (pv.state === 'built') return h('span', null, 'preview built');
+  return null;
+}
+function cardEl(c, colKey, idx) {
+  const cls = ['card'];
+  if (c.status === 'blocked') cls.push('blocked');
+  if (c.id === S.ticketId) cls.push('sel');
+  if (S.flash[c.id]) { if (Date.now() - S.flash[c.id] < 4000) cls.push('flash'); delete S.flash[c.id]; }
+  const meta = [h('span', { 'data-ago': c.updated, title: 'Updated ' + fullTime(c.updated) }, ago(c.updated))];
+  const dzb = dzBadge(c.discussion);
+  if (dzb) meta.push(h('span', { class: 'dzb ' + dzb[2], title: 'Design rounds: ' + dzb[0] }, dzb[0]));
+  if (c.status === 'shaping') meta.push(h('span', null, 'lead is shaping'));
+  if (c.step) meta.push(h('span', { class: 'c-step', title: 'Build step' }, c.step));
+  if (c.verdict) meta.push(verdictEl(c.verdict, c.verdict.result === 'PASS' ? 'ok' : 'bad'));
+  const pv = previewMeta(c.preview);
+  if (pv) meta.push(pv);
+  if (c.openQuestions && c.status !== 'waiting') meta.push(h('span', null, c.openQuestions + ' open ' + (c.openQuestions === 1 ? 'question' : 'questions')));
+  if (colKey === 'parked') meta.push(h('span', null, 'parked'));
+  return h('a', { class: cls.join(' '), href: '#' + c.id, 'data-id': c.id, 'aria-current': c.id === S.ticketId ? 'true' : null },
+    h('div', { class: 'c-top' },
+      h('span', { class: 'id' }, c.id),
+      h('span', { class: 'tag' }, c.type),
+      c.priority === 1 ? h('span', { class: 'mk p1', title: 'Priority 1, high' }, 'P1') : null,
+      c.runNow ? h('span', { class: 'mk rn' }, 'run now') : null,
+      colKey === 'queue' ? h('span', { class: 'pos', title: 'Place in the queue' }, '#' + (idx + 1)) : null),
+    h('div', { class: 'c-title' }, c.title),
+    c.needs ? h('div', { class: 'c-needs' }, c.needs) : null,
+    h('div', { class: 'c-meta' }, meta));
+}
+function colShell(c) {
+  return h('section', { class: 'col ' + c.key, id: 'col-' + c.key, 'data-key': c.key, 'aria-labelledby': 'colh-' + c.key, 'data-zone': c.key === 'you' ? 'amber' : null },
+    h('header', { class: 'col-head' },
+      h('h2', { class: 'col-title', id: 'colh-' + c.key }, h('span', null, c.title), h('span', { class: 'n' }, '0')),
+      h('p', { class: 'col-hint', title: c.hint || '' }, c.hint || '')),
+    h('div', { class: 'col-body' }));
+}
+function pickTab(cols) {
+  const n = Object.fromEntries(cols.map((c) => [c.key, c.tickets.length]));
+  if (n.you) return 'you';
+  const saved = ss.get('crew.tab');
+  if (saved && saved in n) return saved;
+  // A design round waiting to be read (or started, or retried) needs you almost as much as a question.
+  const dz = cols.find((c) => c.key === 'discuss');
+  if (dz && dz.tickets.some((t) => t.discussion && ['ready', 'failed', 'new'].includes(t.discussion.state))) return 'discuss';
+  for (const k of ['test', 'building', 'queue', 'discuss', 'inbox', 'done']) if (n[k]) return k;
+  return 'you';
+}
+function renderTabs(cols) {
+  const tabs = $('#tabs');
+  if (!tabs.childElementCount) {
+    for (const c of cols) {
+      tabs.append(h('button', { type: 'button', role: 'tab', class: 'tab ' + c.key, id: 'btab-' + c.key, 'data-act': 'board-tab', 'data-tab': c.key, 'aria-controls': 'col-' + c.key },
+        h('span', { class: 'n' }, '0'), h('span', { class: 'tl-full' }, c.title), h('span', { class: 'tl-short' }, COL_SHORT[c.key] || c.title)));
+    }
+  }
+  for (const c of cols) {
+    const b = $('#btab-' + c.key);
+    if (!b) continue;
+    const n = c.tickets.length;
+    b.querySelector('.n').textContent = n;
+    b.classList.toggle('has', n > 0);
+    const on = c.key === S.boardTab;
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    b.tabIndex = on ? 0 : -1;
+    b.setAttribute('aria-label', c.title + ', ' + n);
+  }
+}
+function setBoardTab(key) {
+  if (!key) return;
+  S.boardTab = key;
+  ss.set('crew.tab', key);
+  $$('#board .col').forEach((c) => c.classList.toggle('on', c.dataset.key === key));
+  $$('#tabs .tab').forEach((b) => { const on = b.dataset.tab === key; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; });
+  if (isPhone() && window.scrollY > 0) window.scrollTo({ top: 0 });
+}
+function renderBoard() {
+  const st = S.state;
+  const board = $('#board');
+  if (!st || !st.board) {
+    if (S.stateErr) board.replaceChildren(h('div', { class: 'board-msg' }, h('p', null, 'Cannot load the board. ' + S.stateErr), h('button', { type: 'button', class: 'btn', 'data-act': 'reload' }, 'Try again')));
+    return;
+  }
+  const keep = (t) => !S.projectFilter || t.project === S.projectFilter;
+  const cols = (st.board.columns || []).filter((c) => /^[a-z]+$/.test(c.key || '')).map((c) => ({ ...c, tickets: (c.tickets || []).filter(keep) }));
+  // The grid follows the model: one track per column, the Needs you column a little wider.
+  const main = $('#main');
+  main.style.setProperty('--n', String(cols.length || 1));
+  main.style.setProperty('--cols', cols.map((c) => (c.key === 'you' ? 'minmax(184px,1.3fr)' : 'minmax(150px,1fr)')).join(' ') || 'minmax(150px,1fr)');
+  if (!S.boardTab || !cols.some((c) => c.key === S.boardTab)) S.boardTab = pickTab(cols);
+  if (board.querySelector('.board-msg')) board.replaceChildren();
+  const ae = document.activeElement;
+  const focusCard = ae && ae.closest && board.contains(ae) ? ae.closest('.card') : null;
+  const focusId = focusCard ? focusCard.dataset.id : null;
+  for (const c of cols) {
+    let col = $('#col-' + c.key);
+    if (!col) { col = colShell(c); board.append(col); }
+    col.classList.toggle('on', c.key === S.boardTab);
+    col.querySelector('.col-title .n').textContent = c.tickets.length;
+    const body = col.querySelector('.col-body');
+    const top = body.scrollTop;
+    body.replaceChildren(...(c.tickets.length ? c.tickets.map((t, i) => cardEl(t, c.key, i)) : [h('p', { class: 'empty' }, EMPTY[c.key] || 'Nothing here.')]));
+    body.scrollTop = top;
+  }
+  renderTabs(cols);
+  const parked = (st.board.parked || []).filter(keep);
+  $('#parked').hidden = !parked.length;
+  $('#parked-n').textContent = parked.length;
+  $('#parked-list').replaceChildren(...parked.map((c) => cardEl(c, 'parked', 0)));
+  if (focusId) { const el = board.querySelector('.card[data-id="' + CSS.escape(focusId) + '"]'); if (el) el.focus({ preventScroll: true }); }
+  // The tab is the app's: what needs you across every project, and no project name.
+  const you = (st.board.columns || []).find((c) => c.key === 'you');
+  const needs = you && Array.isArray(you.tickets) ? you.tickets.length : 0;
+  document.title = (needs ? '(' + needs + ') ' : '') + 'hqrCrew';
+}
+function markSel() {
+  $$('.card.sel').forEach((c) => { c.classList.remove('sel'); c.removeAttribute('aria-current'); });
+  if (S.ticketId) $$('.card[data-id="' + CSS.escape(S.ticketId) + '"]').forEach((c) => { c.classList.add('sel'); c.setAttribute('aria-current', 'true'); });
+}
+
+/* ================= loading ================= */
+let stateSeq = 0;
+async function loadState() {
+  const seq = ++stateSeq;
+  const asked = Date.now();
+  try {
+    const st = await api('/api/state');
+    if (seq !== stateSeq) return;
+    S.state = st;
+    S.stateErr = null;
+    if (st.tz) tz = st.tz;
+    setPrefixes(st.projects);
+    if (st.lead && typeof st.lead.busy === 'boolean' && asked > (S.lead.at || 0) && st.lead.busy !== S.lead.busy) {
+      S.lead.busy = st.lead.busy;
+      if (!S.lead.busy) { S.lead.partial = ''; S.lead.tools = []; }
+      renderTyping();
+    }
+    renderBar();
+    renderBoard();
+    renderLeadHead();
+    renderChatBtn();
+    if (S.ticket) renderTicket();
+  } catch (e) {
+    if (seq !== stateSeq) return;
+    S.stateErr = e.message;
+    if (!S.state) renderBoard();
+    else toast(e.message, 'error');
+  }
+}
+const scheduleState = debounce(loadState, 250);
+async function loadTicket(id, { quiet = false, force = false } = {}) {
+  try {
+    const t = await api(tpath(id));
+    if (S.ticketId !== id) return;
+    S.ticket = t;
+    S.ticketErr = null;
+    renderTicket(force);
+  } catch (e) {
+    if (S.ticketId !== id) return;
+    if (!S.ticket) { S.ticketErr = e.message; renderTicket(true); }
+    else if (!quiet) toast(e.message, 'error');
+  }
+}
+const scheduleTicket = debounce(() => { if (S.ticketId) loadTicket(S.ticketId, { quiet: true }); }, 250);
+
+/* ================= ticket view ================= */
+function typingIn(root) {
+  const ae = document.activeElement;
+  return !!(ae && root.contains(ae) && (ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || (ae.tagName === 'INPUT' && ae.type === 'text')));
+}
+function capture(root) {
+  const ae = document.activeElement;
+  const c = {};
+  if (ae && root.contains(ae) && ae.dataset && ae.dataset.key) {
+    c.key = ae.dataset.key;
+    if (typeof ae.selectionStart === 'number') { c.s0 = ae.selectionStart; c.s1 = ae.selectionEnd; }
+  }
+  const strip = root.querySelector('.tabstrip');
+  if (strip) c.strip = strip.scrollLeft;
+  return c;
+}
+function restore(root, c) {
+  const strip = root.querySelector('.tabstrip');
+  if (strip && c.strip) strip.scrollLeft = c.strip;
+  if (!c.key) return;
+  const el = root.querySelector('[data-key="' + CSS.escape(c.key) + '"]');
+  if (!el || el.disabled) return;
+  el.focus({ preventScroll: true });
+  if (c.s0 != null && typeof el.setSelectionRange === 'function') { try { el.setSelectionRange(c.s0, c.s1); } catch {} }
+}
+function focusKey(k) {
+  requestAnimationFrame(() => {
+    const el = $('#drawer').querySelector('[data-key="' + CSS.escape(k) + '"]');
+    if (el && !el.disabled) el.focus();
+  });
+}
+function renderTicket(force) {
+  const id = S.ticketId;
+  if (!id) return;
+  const dr = $('#drawer');
+  // Do not swap the form under someone who is typing (it breaks IME composition on Android); catch up on blur.
+  if (!force && typingIn(dr)) { S.ticketDirty = true; return; }
+  S.ticketDirty = false;
+  const keep = capture(dr);
+  const body = $('#dr-body');
+  const top = body.scrollTop;
+  const t = S.ticket;
+  fill($('#dr-head'), ticketHead(id, t && t.state));
+  if (!t) {
+    body.replaceChildren(h('div', { class: 'dr-loading' },
+      h('p', null, S.ticketErr ? S.ticketErr : 'Loading ' + id + '…'),
+      S.ticketErr ? h('button', { type: 'button', class: 'btn', 'data-act': 'close-top' }, 'Back to the board') : null));
+    return;
+  }
+  // A ticket in discussion leads with its design rounds; afterwards they move down, above the tabs.
+  const dz = discussionBlock(t);
+  const dzTop = !!dz && inDiscussion(t.state);
+  body.replaceChildren(...[titleBlock(t), dzTop ? dz : null, needsBlock(t), previewBlock(t), actionsBlock(t), dzTop ? null : dz, tabsBlock(t)].filter(Boolean));
+  body.scrollTop = top;
+  restore(dr, keep);
+  if (dz) requestAnimationFrame(measureSummaries);
+  voiceCheck();
+}
+function ticketHead(id, s) {
+  const st = s ? statusOf(s) : null;
+  return [
+    h('button', { type: 'button', class: 'ibtn back', 'data-act': 'close-top', 'data-key': 'close', 'aria-label': 'Close ' + id, title: 'Close (Esc)' },
+      h('span', { class: 'only-phone', 'aria-hidden': 'true' }, '←'), h('span', { class: 'only-desk', 'aria-hidden': 'true' }, '×')),
+    h('span', { class: 'dr-id' }, id),
+    s ? h('span', { class: 'tag' }, s.type) : null,
+    st ? h('span', { class: 'st ' + st[1] }, st[0]) : null,
+    s && s.verdict ? h('span', { class: 'dr-verdict' }, verdictEl(s.verdict)) : null,
+  ];
+}
+function titleBlock(t) {
+  const s = t.state;
+  const facts = [
+    h('span', { class: s.priority === 1 ? 'hot' : null }, 'P' + s.priority + ' ' + (PRIO[s.priority] || '')),
+    h('span', null, s.approval === 'user' ? 'needs your OK to queue' : 'the lead may queue it'),
+    h('span', { title: fullTime(s.created) }, 'created ' + when(s.created)),
+    h('span', { title: fullTime(s.updated) }, 'updated ', h('span', { 'data-ago': s.updated }, ago(s.updated))),
+  ];
+  const meta = [];
+  if (s.branch) meta.push(h('span', { class: 'branch' }, h('span', null, s.branch), h('button', { type: 'button', class: 'copy', 'data-act': 'copy', 'data-copy': s.branch, 'data-key': 'copy-branch', 'aria-label': 'Copy the branch name' }, 'Copy')));
+  const pr = s.pr && safeUrl(s.pr.url);
+  if (pr) meta.push(h('a', { class: 'btn', href: pr, target: '_blank', rel: 'noopener noreferrer' }, 'Pull request ↗'));
+  if (s.job && s.job.diffStat) meta.push(h('span', { class: 'diffstat' }, s.job.diffStat));
+  return h('header', null,
+    h('h2', { class: 'dr-title', id: 'dr-title', tabindex: '-1' }, s.title),
+    h('div', { class: 'facts' }, facts),
+    meta.length ? h('div', { class: 'dr-meta' }, meta) : null);
+}
+function questionEl(id, q) {
+  const key = 'ans:' + id + ':' + q.id;
+  const busy = S.busy.has(key);
+  const opts = Array.isArray(q.options) ? q.options.filter((o) => typeof o === 'string' && o.trim()) : [];
+  // A designer's decision is "Round N · decision M: question" with the reason on the next line.
+  const text = String(q.text || '');
+  const cut = q.from === 'designer' ? text.indexOf('\n') : -1;
+  return h('div', { class: 'q' },
+    h('div', { class: 'q-meta' }, h('b', null, q.id), ' from ' + who(q.from) + (q.escalated ? ', passed on by the lead' : '') + (q.at ? ' · ' + when(q.at) : '')),
+    mdEl(cut > 0 ? text.slice(0, cut) : text, 'q-text'),
+    cut > 0 && text.slice(cut + 1).trim() ? h('p', { class: 'q-why' }, text.slice(cut + 1).trim()) : null,
+    opts.length ? h('div', { class: 'q-opts', role: 'group', 'aria-label': 'Answers for ' + q.id },
+      opts.map((o, i) => {
+        // The designer marks its pick "(recommended)": show a tag instead, and still answer with the full text.
+        const pick = RECO.test(o);
+        const shown = pick ? o.replace(RECO, ' ').replace(/\s+/g, ' ').trim() : o;
+        return h('button', { type: 'button', class: 'opt' + (pick ? ' pick' : ''), 'data-act': 'answer', 'data-q': q.id, 'data-text': o, 'data-key': key + ':o' + i, 'aria-label': pick ? shown + ' (recommended)' : null, disabled: busy },
+          shown, pick ? h('span', { class: 'pick-tag', 'aria-hidden': 'true' }, 'pick') : null);
+      })) : null,
+    h('div', { class: 'q-free' },
+      tbox(h('textarea', { rows: 1, 'data-draft': key, 'data-key': key, 'aria-label': (opts.length ? 'Your own answer to ' : 'Answer to ') + q.id, placeholder: opts.length ? 'Or write your own answer' : 'Your answer', value: S.drafts[key] || '' }), key),
+      h('button', { type: 'button', class: 'btn acc', 'data-act': 'answer-free', 'data-q': q.id, 'data-key': key + ':send', disabled: busy }, busy ? 'Sending…' : 'Send answer')));
+}
+function needsBlock(t) {
+  const s = t.state;
+  const a = t.actions || [];
+  // The latest design round's decisions are answered inside the Discussion section, next to its page.
+  const inDz = new Set(dzOpenQs(s).map((q) => q.id));
+  const qs = (s.questions || []).filter((q) => !q.answer && q.to === 'user' && !inDz.has(q.id));
+  const parts = [];
+  if (qs.length) {
+    const how = qs.some((q) => Array.isArray(q.options) && q.options.length) ? 'Tap an answer or write your own.' : 'Write your answer below.';
+    parts.push(h('p', { class: 'blk-lead' }, (qs.length === 1 ? 'One question for you. ' : qs.length + ' questions for you. ') + how));
+    for (const q of qs) parts.push(questionEl(s.id, q));
+  }
+  if (s.status === 'ready' && a.includes('approve')) {
+    const contract = (t.files && t.files['contract.md']) || '';
+    const user = s.approval === 'user';
+    parts.push(h('p', { class: 'blk-lead' }, user ? 'The lead wrote the plan. Read it and approve it to queue it for the night shift.' : 'The plan is ready. Queue it for the night shift.'));
+    parts.push(contract.trim() ? h('div', { class: 'contract-box' }, mdEl(contract)) : h('p', { class: 'empty-note' }, 'No contract yet.'));
+    parts.push(h('div', { class: 'row' },
+      actBtn('approve', user ? 'Approve plan' : 'Queue it', 'acc solid big'),
+      h('span', { class: 'small muted' }, 'Want changes? Add a note below or tell the lead in chat.')));
+  }
+  if (s.status === 'blocked') {
+    parts.push(h('p', { class: 'err-text' }, (s.job && s.job.lastError) || 'The night shift stopped on this one. The timeline says why.'));
+    parts.push(h('div', { class: 'row' },
+      a.includes('retry') ? actBtn('retry', 'Retry', 'acc solid') : null,
+      a.includes('reopen') ? actBtn('reopen', 'Back to the lead') : null));
+  }
+  if (!parts.length) return null;
+  const blocked = s.status === 'blocked';
+  return h('section', { class: 'blk needs', 'data-zone': blocked ? 'burgundy' : 'amber', 'aria-labelledby': 'needs-h' },
+    h('h3', { class: 'blk-label', id: 'needs-h' }, blocked ? 'Blocked · needs you' : 'Needs you'), parts);
+}
+/* ================= discussion: design rounds before a plan ================= */
+const RECO = /\s*\(recommended\)/i;
+const inDiscussion = (s) => !!s && (s.status === 'discussing' || (s.status === 'waiting' && s.resumeStatus === 'discussing'));
+// Finished rounds, newest first.
+function dzRounds(d) {
+  return (d && Array.isArray(d.rounds) ? d.rounds : []).filter((r) => r && Number(r.n) > 0).sort((x, y) => Number(y.n) - Number(x.n));
+}
+// The latest round's open decisions: they are answered in the Discussion section, next to the page they come from.
+function dzOpenQs(s) {
+  const d = s && s.discussion;
+  if (!d || d.state === 'accepted') return [];
+  const latest = dzRounds(d)[0];
+  const ids = latest && Array.isArray(latest.questions) ? latest.questions : [];
+  return (s.questions || []).filter((q) => ids.includes(q.id) && !q.answer && q.to === 'user');
+}
+// From the card's discussion facts: [text, .st tone in the ticket view, badge tone on cards].
+function dzBadge(d) {
+  if (!d || !d.state) return null;
+  const done = Number(d.round) || 0;
+  const next = Number(d.pending) || done + 1;
+  switch (d.state) {
+    case 'new': return ['No round yet', 'no', 't-idle'];
+    case 'queued': return ['Round ' + next + ' queued', '', 't-wait'];
+    case 'designing': return ['Designing round ' + next + (d.step ? ' · ' + d.step : ''), 'yes pulse', 't-run'];
+    case 'ready': return ['Round ' + (done || 1) + ' ready', 'part', 't-ready'];
+    case 'failed': return ['Round ' + next + ' failed', 'risk', 't-bad'];
+    case 'accepted': return ['Accepted round ' + (Number(d.accepted) || done), 'yes', 't-ok'];
+    default: return null;
+  }
+}
+// The ticket's full discussion, in the card's shape.
+function dzFacts(d) {
+  const rs = dzRounds(d);
+  return { state: d.state, round: rs.length ? Number(rs[0].n) : 0, pending: d.pending && d.pending.round, step: d.step, accepted: d.acceptedRound };
+}
+const DZ_STEP = { design: 'The designer is drafting the page', check: 'Checking the page at 390 and 1280 px', publish: 'Publishing the page' };
+function discussionBlock(t) {
+  const s = t.state;
+  const d = s.discussion;
+  if (!d || typeof d !== 'object') return null;
+  const id = s.id;
+  const a = new Set(t.actions || []);
+  const rounds = dzRounds(d);
+  const latest = rounds[0] || null;
+  const st = d.state || 'new';
+  const badge = dzBadge(dzFacts(d));
+  const openQs = dzOpenQs(s);
+  const canDiscuss = a.has('discuss');
+  const canAccept = a.has('accept') && !!latest;
+  const kids = [
+    h('div', { class: 'blk-top' },
+      h('h3', { class: 'blk-label', id: 'dz-h', tabindex: '-1', 'data-key': 'dz-h' }, 'Discussion'),
+      badge ? h('span', { class: 'st ' + badge[1] }, badge[0]) : null,
+      h('span', { class: 'grow' }),
+      Number(d.costUsd) > 0 ? h('span', { class: 'dz-cost', title: 'What the design rounds cost so far (API-equivalent)' }, '$' + Number(d.costUsd).toFixed(2)) : null),
+    dzState(s, d, a, rounds),
+  ];
+  if (canDiscuss && !rounds.length && st !== 'failed') kids.push(dzComposer(id, 1));
+  if (latest) kids.push(roundEl(id, latest, Number(d.acceptedRound) === Number(latest.n)));
+  if (openQs.length) {
+    kids.push(h('div', { class: 'dz-qs' },
+      h('p', { class: 'blk-lead' }, 'Round ' + latest.n + (openQs.length === 1 ? ' asks one decision. ' : ' asks ' + openQs.length + ' decisions. ') + 'Tap an answer, write your own, or accept the round to take its picks.'),
+      openQs.map((q) => questionEl(id, q))));
+  }
+  const step = [];
+  if (canAccept) step.push(dzAccept(id, latest, openQs.length));
+  if (canDiscuss && latest && st !== 'failed') step.push(dzComposer(id, Number(latest.n) + 1));
+  if (step.length) kids.push(h('div', { class: 'dz-step' }, step));
+  if (rounds.length > 1) {
+    kids.push(h('div', { class: 'dz-earlier' }, h('h4', { class: 'label' }, 'Earlier rounds'),
+      rounds.slice(1).map((r) => roundEl(id, r, Number(d.acceptedRound) === Number(r.n)))));
+  }
+  const you = canAccept || canDiscuss;
+  const zone = st === 'failed' ? 'burgundy' : st === 'designing' || st === 'accepted' ? 'green' : 'amber';
+  return h('section', { class: 'blk dz' + (you ? ' you' : ''), 'data-zone': zone, 'aria-labelledby': 'dz-h' }, kids);
+}
+function dzState(s, d, a, rounds) {
+  const st = d.state || 'new';
+  const p = d.pending && typeof d.pending === 'object' ? d.pending : null;
+  const n = (p && Number(p.round)) || (rounds.length ? Number(rounds[0].n) + 1 : 1);
+  const focus = p && nonEmpty(p.note) ? h('p', { class: 'dz-focus' }, h('span', { class: 'label' }, 'Focus'), p.note) : null;
+  const asked = p ? (p.by === 'user' ? 'You asked for it' : p.by === 'lead' ? 'The lead asked for it' : 'Asked for') + (p.at ? ' ' + when(p.at) : '') + '.' : '';
+  const out = [];
+  if (st === 'new') {
+    out.push(h('p', { class: 'dz-line' }, a.has('discuss') ? 'The lead frames round 1, or start it yourself below with a focus for the designer.' : 'Nothing designed yet.'));
+  } else if (st === 'queued') {
+    const r = (S.state && S.state.runner) || {};
+    const hold = r.mode === 'paused' ? 'The runner is paused. Switch it to Night or Always in the runner menu to start the round.'
+      : r.current && r.current.ticket && r.current.ticket !== s.id ? 'The runner is busy with ' + r.current.ticket + '; the round starts after that job.'
+      : r.lastHold ? 'On hold: ' + r.lastHold + '.' : '';
+    out.push(h('p', { class: 'dz-line' }, 'Round ' + n + ' is queued. Design rounds go before builds and start as soon as nothing else runs.'),
+      h('p', { class: 'dz-sub' }, [asked, hold].filter(Boolean).join(' ')), focus);
+  } else if (st === 'designing') {
+    out.push(h('p', { class: 'dz-line' }, (DZ_STEP[d.step] || 'The designer is working') + ' for round ' + n + '.'),
+      d.startedAt ? h('p', { class: 'dz-sub' }, 'Started ' + when(d.startedAt) + ', ', h('span', { 'data-ago': d.startedAt }, ago(d.startedAt)), '. This updates on its own.') : null,
+      focus);
+  } else if (st === 'ready') {
+    const n0 = rounds.length ? rounds[0].n : 1;
+    out.push(h('p', { class: 'dz-line' }, 'Round ' + n0 + ' is ready.' + (a.has('accept') ? ' Read its page, then accept it or ask for another round.' : a.has('discuss') ? ' Ask for another round to pick the discussion up again.' : '')));
+  } else if (st === 'failed') {
+    const busy = S.busy.has('act:' + s.id + ':discuss');
+    out.push(h('p', { class: 'err-text' }, 'Round ' + n + ' failed: ' + (d.lastError || 'the timeline says why.')), focus);
+    if (a.has('discuss')) {
+      out.push(h('div', { class: 'row' },
+        h('button', { type: 'button', class: 'btn acc solid', 'data-act': 'dz-retry', 'data-key': 'dz-retry', 'aria-busy': busy ? 'true' : null, disabled: busy }, busy ? 'Asking…' : 'Try again'),
+        h('span', { class: 'small muted' }, 'Runs round ' + n + ' again' + (focus ? ' with the same focus.' : '.'))));
+    }
+  } else if (st === 'accepted') {
+    out.push(h('p', { class: 'dz-line', title: d.acceptedAt ? fullTime(d.acceptedAt) : null }, 'You accepted round ' + (d.acceptedRound || '?') + (d.acceptedAt ? ' at ' + when(d.acceptedAt) : '') + '. The lead plans the build from it.'));
+  }
+  return h('div', { class: 'dz-state' }, out);
+}
+function roundEl(id, r, accepted) {
+  const n = Number(r.n);
+  const page = /^round-\d+\.html$/.test(String(r.page || '')) ? r.page : 'round-' + n + '.html';
+  const link = safeUrl(r.link);
+  const okey = id + ':' + n;
+  const open = !!S.dzOpen[okey];
+  const summary = String(r.summary || '').trim();
+  const by = r.by === 'user' ? 'asked by you' : r.by === 'lead' ? 'asked by the lead' : r.by ? 'asked by ' + who(r.by) : '';
+  const ck = r.check && typeof r.check === 'object' ? r.check : null;
+  const probs = ck && Array.isArray(ck.problems) ? ck.problems.filter(nonEmpty) : [];
+  let check = null;
+  if (ck && ck.skipped) check = h('p', { class: 'dz-check' }, 'Page not checked' + (probs[0] ? ': ' + probs[0].replace(/^not checked:\s*/i, '') : '.'));
+  else if (probs.length) {
+    check = h('div', { class: 'dz-check' }, h('p', null, 'Page check: ' + probs.length + (probs.length === 1 ? ' problem' : ' problems') + (ck.ok ? ', passed anyway' : '')),
+      h('ul', null, probs.slice(0, 5).map((p) => h('li', null, p))));
+  }
+  return h('article', { class: 'dz-round', 'aria-labelledby': 'dz-r' + n },
+    h('div', { class: 'dz-rh' },
+      h('h4', { id: 'dz-r' + n }, 'Round ' + n),
+      r.at ? h('span', { title: fullTime(r.at) }, when(r.at)) : null,
+      by ? h('span', null, by) : null,
+      accepted ? h('b', { class: 'tag ok' }, 'accepted') : null),
+    nonEmpty(r.note) ? h('p', { class: 'dz-focus' }, h('span', { class: 'label' }, 'Focus'), r.note) : null,
+    summary ? h('div', { class: 'dz-sum' + (open ? '' : ' clamp' + (S.dzOver[okey] ? ' cut' : '')), id: 'dz-sum-' + n, 'data-n': String(n) }, summary) : h('p', { class: 'dz-sub' }, 'No summary for this round.'),
+    summary ? h('button', { type: 'button', class: 'linkbtn dz-more', 'data-act': 'dz-more', 'data-n': String(n), 'data-key': 'dz-more-' + n, 'aria-expanded': open ? 'true' : 'false', 'aria-controls': 'dz-sum-' + n, hidden: !open && !S.dzOver[okey] }, open ? 'Show less' : 'Show more') : null,
+    h('div', { class: 'dz-btns' },
+      h('a', { class: 'btn', href: tpath(id, '/discuss/' + page), target: '_blank', rel: 'noopener', 'data-key': 'dz-page-' + n }, 'Open page ↗'),
+      link ? h('a', { class: 'btn', href: link, target: '_blank', rel: 'noopener noreferrer', title: link, 'data-key': 'dz-link-' + n }, 'Open link ↗') : null,
+      summary.length >= 1990 ? h('a', { class: 'linkbtn', href: tpath(id, '/discuss/round-' + n + '.md'), target: '_blank', rel: 'noopener' }, 'Full summary') : null),
+    check);
+}
+function dzAccept(id, r, openN) {
+  const n = Number(r.n);
+  const busy = S.busy.has('act:' + id + ':accept');
+  const asking = S.confirm === 'accept';
+  // Accepting is the way forward, so it stays amber even when the block is red for a failed round.
+  const out = [h('div', { class: 'row', 'data-zone': 'amber' },
+    h('button', { type: 'button', class: 'btn acc solid big', 'data-act': 'dz-accept-ask', 'data-key': 'dz-accept', 'aria-expanded': asking ? 'true' : 'false', disabled: busy }, 'Accept round ' + n),
+    h('span', { class: 'small muted' }, openN ? (openN === 1 ? 'Its open decision takes' : 'Its ' + openN + ' open decisions take') + ' the recommended pick.' : 'Then the lead plans the build.'))];
+  if (asking) {
+    out.push(h('div', { class: 'confirm calm', 'data-zone': 'amber', role: 'group', 'aria-label': 'Confirm accepting round ' + n },
+      h('span', null, 'Accept round ' + n + '? Open decisions take the recommended pick, and the lead plans the build.'),
+      h('div', { class: 'row' },
+        h('button', { type: 'button', class: 'btn acc solid', 'data-act': 'dz-accept', 'data-round': String(n), 'data-key': 'dz-accept-yes', 'aria-busy': busy ? 'true' : null, disabled: busy }, busy ? 'Accepting…' : 'Accept it'),
+        h('button', { type: 'button', class: 'btn', 'data-act': 'dz-accept-cancel', 'data-key': 'dz-accept-no' }, 'Not yet'))));
+  }
+  return out;
+}
+function dzComposer(id, n) {
+  const key = 'dz:' + id;
+  const busy = S.busy.has('act:' + id + ':discuss');
+  const first = n === 1;
+  return h('div', { class: 'dz-next' },
+    h('label', { class: 'label', for: 'dz-in' }, first ? 'What should round 1 explore?' : 'What should the next round change or explore?'),
+    tbox(h('textarea', { id: 'dz-in', rows: 2, 'data-draft': key, 'data-key': key, placeholder: first ? 'Optional: the open questions, who it is for, what to leave out.' : 'Optional: what to change, compare or leave out.', value: S.drafts[key] || '' }), key),
+    h('div', { class: 'row' },
+      h('button', { type: 'button', class: 'btn' + (first ? ' acc solid' : ''), 'data-act': 'dz-send', 'data-key': 'dz-send', 'aria-busy': busy ? 'true' : null, disabled: busy }, busy ? 'Asking…' : first ? 'Start round 1' : 'Next round'),
+      h('span', { class: 'small muted' }, 'The designer starts as soon as nothing else runs.')));
+}
+// A summary is cut at about eight lines; "Show more" appears only when something is cut.
+function measureSummaries() {
+  const id = S.ticketId;
+  if (!id) return;
+  for (const el of $$('#dr-body .dz-sum.clamp')) {
+    const n = el.dataset.n;
+    const btn = $('#dr-body .dz-more[data-n="' + CSS.escape(n) + '"]');
+    if (!btn) continue;
+    const over = el.scrollHeight > el.clientHeight + 2;
+    S.dzOver[id + ':' + n] = over;
+    el.classList.toggle('cut', over);
+    btn.hidden = !over;
+  }
+}
+function sendDiscuss() {
+  const id = S.ticketId;
+  if (!id) return;
+  voiceSent('dz:' + id);
+  doAction('discuss', { note: String(S.drafts['dz:' + id] || '').trim() });
+}
+
+function slotInfo(s) {
+  const proj = project(s.project);
+  const slots = (proj && proj.slots) || [];
+  const now = Date.now();
+  const taken = ((S.state && S.state.previews) || []).filter((p) => p.ticket !== s.id && String(p.key || '').startsWith(s.project + ':') &&
+    (p.state === 'starting' || (p.state === 'up' && new Date(p.expiresAt).getTime() > now)));
+  const free = slots.filter((sl) => !taken.some((p) => p.slot === sl.n));
+  if (slots.length && !free.length) {
+    return { free: false, note: 'All preview slots are busy (' + taken.map((p) => p.ticket + (p.expiresAt ? ' until ' + when(p.expiresAt) : '')).join(', ') + '). Stop one first.' };
+  }
+  const b = s.preview && s.preview.builtFor;
+  const fast = b && (!slots.length || free.some((sl) => sl.n === b));
+  return { free: true, note: fast ? 'Fast: it is already built for slot ' + b + '.' : 'Builds first, about 4 min.' };
+}
+function previewBlock(t) {
+  const s = t.state;
+  const a = t.actions || [];
+  const pv = s.preview || {};
+  const st = pv.state;
+  const active = ['starting', 'building', 'failed', 'up'].includes(st);
+  if (!a.includes('previewUp') && !a.includes('previewDown') && !active) return null;
+  const busy = S.busy.has('pv:' + s.id);
+  const pending = !!S.pvPending[s.id];
+  const kids = [h('div', { class: 'blk-top' }, h('h3', { class: 'blk-label', id: 'pv-h' }, 'Preview'), pv.slot && active ? h('span', { class: 'small helper mono' }, 'slot ' + pv.slot) : null)];
+  if (st === 'up') {
+    const url = safeUrl(pv.url);
+    const proj = project(s.project);
+    const logins = String(pv.logins || (proj && proj.logins) || '').trim();
+    kids.push(url
+      ? h('a', { class: 'pv-open', href: url, target: '_blank', rel: 'noopener noreferrer', 'data-key': 'pv-open' }, h('span', { class: 'st yes' }, 'Open the preview'), h('span', { class: 'pv-host' }, url.replace(/^https?:\/\//, '').replace(/\/$/, '') + ' ↗'))
+      : h('p', { class: 'st yes' }, 'The preview is up.'));
+    if (logins) kids.push(h('div', { class: 'logins' }, h('p', { class: 'label' }, 'Demo logins'), h('ul', null, logins.split(/\s+·\s+/).map((x) => h('li', null, x)))));
+    kids.push(h('div', { class: 'row' },
+      h('span', { class: 'pv-until' }, 'Stops at ', h('b', null, pv.expiresAt ? when(pv.expiresAt) : '?')),
+      h('span', { class: 'grow' }),
+      h('button', { type: 'button', class: 'btn', 'data-act': 'pv', 'data-op': 'extend', 'data-key': 'pv-extend', disabled: busy, title: 'Keep it running two more hours' }, '+2h'),
+      h('button', { type: 'button', class: 'btn danger', 'data-act': 'pv', 'data-op': 'down', 'data-key': 'pv-down', disabled: busy }, 'Stop')));
+  } else if (st === 'starting' || st === 'building') {
+    kids.push(h('p', null, h('span', { class: 'st part pulse' }, st === 'starting' ? 'Starting on slot ' + (pv.slot || '?') + '…' : 'Building for slot ' + (pv.slot || '?') + ', about 4 min…')));
+    kids.push(h('p', { class: 'small muted' }, 'This updates on its own. You can close the ticket meanwhile; the link appears here and in the top bar.'));
+  } else {
+    if (st === 'failed') kids.push(h('div', null, h('span', { class: 'st risk' }, 'The preview failed to start'), pv.error ? h('span', { class: 'pv-err' }, pv.error) : null));
+    const info = slotInfo(s);
+    kids.push(h('div', { class: 'row' },
+      h('button', { type: 'button', class: 'btn acc solid big', 'data-act': 'pv', 'data-op': 'up', 'data-key': 'pv-up', disabled: busy || pending || !info.free },
+        pending ? 'Starting…' : st === 'failed' ? 'Try again' : 'Test it'),
+      h('span', { class: 'pv-note' }, pending ? 'Asked the server to start it. This updates on its own.' : info.note)));
+  }
+  return h('section', { class: 'blk pv', 'data-zone': st === 'up' ? 'green' : st === 'failed' ? 'burgundy' : 'violet', 'aria-labelledby': 'pv-h' }, kids);
+}
+function actBtn(k, label, cls) {
+  const busy = S.busy.has('act:' + S.ticketId + ':' + k);
+  return h('button', { type: 'button', class: 'btn ' + (cls || ''), 'data-act': 'action', 'data-action': k, 'data-key': 'act-' + k, 'aria-busy': busy ? 'true' : null, disabled: busy }, busy ? label + '…' : label);
+}
+function actionsBlock(t) {
+  const s = t.state;
+  const id = s.id;
+  const a = new Set(t.actions || []);
+  const skip = new Set();
+  if (s.status === 'ready') skip.add('approve');
+  if (s.status === 'blocked') { skip.add('retry'); skip.add('reopen'); }
+  // With a discussion on the ticket, its section asks for rounds; "Discuss first" is for tickets without one.
+  if (s.discussion) skip.add('discuss');
+  const btns = [];
+  for (const k of ['approve', 'discuss', 'runNow', 'top', 'done', 'changes', 'retry', 'reopen', 'park', 'drop']) {
+    if (!a.has(k) || skip.has(k)) continue;
+    if (k === 'approve') btns.push(actBtn(k, s.approval === 'user' ? 'Approve plan' : 'Queue it', 'acc'));
+    else if (k === 'discuss') btns.push(actBtn(k, 'Discuss first'));
+    else if (k === 'changes') btns.push(h('button', { type: 'button', class: 'btn', 'data-act': 'changes-toggle', 'data-key': 'act-changes', 'aria-expanded': S.changesOpen ? 'true' : 'false' }, 'Request changes'));
+    else if (k === 'drop') btns.push(h('button', { type: 'button', class: 'btn', 'data-act': 'drop-ask', 'data-key': 'act-drop', 'aria-expanded': S.confirm === 'drop' ? 'true' : 'false' }, 'Drop'));
+    else btns.push(actBtn(k, ACT_LABEL[k] || k, k === 'done' ? 'go' : ''));
+  }
+  const parts = [];
+  if (btns.length) parts.push(h('div', { class: 'row' }, btns));
+  if (S.confirm === 'drop' && a.has('drop')) {
+    parts.push(h('div', { class: 'confirm', role: 'group', 'aria-label': 'Confirm drop' },
+      h('span', null, 'Drop ' + id + '? It leaves the board. You can still reopen it from its link.'),
+      h('div', { class: 'row' },
+        actBtn('drop', 'Drop it', 'danger'),
+        h('button', { type: 'button', class: 'btn', 'data-act': 'drop-cancel', 'data-key': 'drop-no' }, 'Keep it'))));
+  }
+  if (S.changesOpen && a.has('changes')) {
+    const key = 'chg:' + id;
+    const busy = S.busy.has('act:' + id + ':changes');
+    parts.push(h('div', { class: 'changes' },
+      h('label', { class: 'label', for: 'chg-in' }, 'What should change?'),
+      tbox(h('textarea', { id: 'chg-in', rows: 3, required: true, 'data-draft': key, 'data-key': key, placeholder: 'The coder gets this as the next round of work. The preview stops.', value: S.drafts[key] || '' }), key),
+      h('div', { class: 'row' },
+        h('button', { type: 'button', class: 'btn acc solid', 'data-zone': 'amber', 'data-act': 'changes-send', 'data-key': 'chg-send', disabled: busy }, busy ? 'Sending…' : 'Send to the coder'),
+        h('button', { type: 'button', class: 'btn', 'data-act': 'changes-toggle', 'data-key': 'chg-cancel' }, 'Cancel'))));
+  }
+  const set = [];
+  if (a.has('priority')) {
+    set.push(h('label', { class: 'set', for: 'prio-sel' }, h('span', { class: 'label' }, 'Priority'),
+      h('select', { id: 'prio-sel', 'data-change': 'priority', 'data-key': 'prio' }, [1, 2, 3].map((n) => h('option', { value: String(n), selected: s.priority === n }, 'P' + n + ' · ' + PRIO[n])))));
+  }
+  if (a.has('approval')) {
+    set.push(h('div', { class: 'set' }, h('span', { class: 'label', id: 'appr-l' }, 'Queueing'),
+      h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'appr-l' },
+        h('button', { type: 'button', 'data-act': 'approval', 'data-value': 'user', 'data-key': 'appr-user', 'aria-pressed': s.approval === 'user' ? 'true' : 'false' }, 'Needs my OK'),
+        h('button', { type: 'button', 'data-act': 'approval', 'data-value': 'auto', 'data-key': 'appr-auto', 'aria-pressed': s.approval === 'auto' ? 'true' : 'false' }, 'Lead may queue'))));
+  }
+  if (set.length) parts.push(h('div', { class: 'settings' }, set));
+  if (a.has('note')) {
+    const key = 'note:' + id;
+    parts.push(h('div', { class: 'notebox' },
+      h('label', { class: 'label', for: 'note-in' }, 'Add a note'),
+      h('div', { class: 'note-row' },
+        tbox(h('textarea', { id: 'note-in', rows: 1, 'data-draft': key, 'data-key': key, placeholder: 'For the lead and the coder. It goes on the timeline.', value: S.drafts[key] || '' }), key),
+        h('button', { type: 'button', class: 'btn', 'data-act': 'note-add', 'data-key': 'note-add', disabled: S.busy.has('act:' + id + ':note') }, 'Add note'))));
+  }
+  return h('section', { class: 'blk acts', 'aria-label': 'Actions' }, parts);
+}
+const nonEmpty = (x) => typeof x === 'string' && x.trim().length > 0;
+function stripTitle(src, id) {
+  const s = String(src || '');
+  const first = s.match(/^\s*#\s+([^\n]*)\n?/);
+  return first && first[1].startsWith(id) ? s.slice(first[0].length) : s;
+}
+function tabsBlock(t) {
+  const s = t.state;
+  const f = t.files || {};
+  const list = [];
+  if (nonEmpty(f['check.md'])) list.push(['test', 'How to test']);
+  list.push(['contract', 'Contract']);
+  list.push(['story', 'Story']);
+  if (nonEmpty(f['verify.md']) || s.verdict) list.push(['verify', 'Verifier']);
+  if (nonEmpty(f['plan.md'])) list.push(['plan', 'Plan']);
+  if (nonEmpty(f['notes.md'])) list.push(['notes', 'Notes']);
+  list.push(['qa', 'Q&A', (s.questions || []).length + (s.decisions || []).length]);
+  list.push(['timeline', 'Timeline', (t.events || []).length]);
+  list.push(['runs', 'Runs', (t.runs || []).length]);
+  let cur = S.tabPicked[s.id] ? S.tabs[s.id] : null;
+  if (!cur || !list.some(([k]) => k === cur)) {
+    const pref = { review: ['test', 'verify'], done: ['verify', 'test', 'story'], ready: ['story'], queued: ['contract'], building: ['timeline'], blocked: ['timeline'] }[s.status] || ['story'];
+    cur = pref.find((k) => list.some(([x]) => x === k)) || 'story';
+    S.tabs[s.id] = cur;
+  }
+  const strip = h('div', { class: 'tabstrip', role: 'tablist', 'aria-label': 'Ticket sections' },
+    list.map(([k, label, n]) => h('button', { type: 'button', role: 'tab', id: 'tab-' + k, title: k === 'qa' ? 'Decisions and questions' : null, 'aria-label': k === 'qa' ? 'Decisions and questions' + (n ? ', ' + n : '') : null, 'aria-selected': k === cur ? 'true' : 'false', 'aria-controls': 'dr-panel', tabindex: k === cur ? '0' : '-1', 'data-act': 'tab', 'data-tab': k, 'data-key': 'tab-' + k },
+      label, n ? h('span', { class: 'cnt' }, n) : null)));
+  const panel = h('div', { class: 'tabpanel', id: 'dr-panel', role: 'tabpanel', 'aria-labelledby': 'tab-' + cur, tabindex: '0' }, panelFor(cur, t));
+  return h('section', { class: 'tabs-wrap' }, strip, panel);
+}
+const fileView = (src, empty) => (nonEmpty(src) ? mdEl(src) : h('p', { class: 'empty-note' }, empty));
+function panelFor(k, t) {
+  const s = t.state;
+  const f = t.files || {};
+  switch (k) {
+    case 'test': return fileView(f['check.md'], 'No test steps yet.');
+    case 'contract': return fileView(f['contract.md'], 'No contract yet. The lead writes one while shaping.');
+    case 'story': return fileView(stripTitle(f['story.md'], s.id), 'No story written.');
+    case 'verify': return [
+      s.verdict ? h('p', { class: 'verdict-line' }, verdictEl(s.verdict), h('span', { class: 'small helper mono' }, [s.verdict.run, s.verdict.round ? 'round ' + s.verdict.round : '', when(s.verdict.at)].filter(Boolean).join(' · '))) : null,
+      fileView(f['verify.md'], 'The verifier has not written a report yet.'),
+    ];
+    case 'plan': return fileView(f['plan.md'], 'No plan yet.');
+    case 'notes': return fileView(f['notes.md'], 'No notes.');
+    case 'qa': return qaView(s);
+    case 'timeline': return timelineView(t.events);
+    case 'runs': return runsView(t);
+    default: return null;
+  }
+}
+function qaView(s) {
+  const qs = s.questions || [];
+  const ds = s.decisions || [];
+  if (!qs.length && !ds.length) return h('p', { class: 'empty-note' }, 'No questions or decisions yet.');
+  const out = [];
+  if (qs.length) {
+    out.push(h('h3', { class: 'qa-h' }, 'Questions'));
+    for (const q of qs) {
+      out.push(h('div', { class: 'qa-q' },
+        h('div', { class: 'qa-meta' }, h('b', null, q.id), h('span', null, 'for ' + who(q.to) + ' · from ' + who(q.from) + (q.at ? ' · ' + when(q.at) : '')), q.answer ? null : h('span', { class: 'st part' }, 'open')),
+        mdEl(q.text),
+        Array.isArray(q.options) && q.options.length ? h('p', { class: 'qa-opts' }, 'Options: ' + q.options.join(' / ')) : null,
+        q.answer ? h('p', { class: 'qa-a' }, '→ ' + q.answer + ' ', h('span', { class: 'who' }, who(q.answeredBy) + (q.answeredAt ? ' · ' + when(q.answeredAt) : ''))) : null));
+    }
+  }
+  if (ds.length) {
+    out.push(h('h3', { class: 'qa-h', style: 'margin-top:22px' }, 'Decisions'));
+    for (const d of ds) {
+      out.push(h('div', { class: 'qa-d' },
+        h('div', { class: 'qa-meta' }, h('b', null, d.id), h('span', null, who(d.by) + (d.at ? ' · ' + when(d.at) : '') + (d.fromQ ? ' · from ' + d.fromQ : ''))),
+        h('p', null, d.text),
+        d.why ? h('p', { class: 'small muted' }, 'Why: ' + d.why) : null));
+    }
+  }
+  return out;
+}
+function timelineView(events) {
+  if (!events || !events.length) return h('p', { class: 'empty-note' }, 'Nothing has happened yet.');
+  return h('ol', { class: 'tl' }, events.slice().reverse().map((e) => h('li', { class: 'ev', 'data-type': String(e.type || '').replace(/[^a-z-]/gi, '') },
+    h('span', { class: 'ev-when', title: fullTime(e.ts) }, when(e.ts)),
+    h('div', null,
+      h('div', { class: 'ev-head' }, h('span', { class: 'ev-who' }, who(e.by)), h('span', { class: 'ev-type' }, e.type || '')),
+      e.text ? h('span', { class: 'ev-text' }, e.text) : null))));
+}
+function runsView(t) {
+  const s = t.state;
+  const runs = (t.runs || []).slice().reverse();
+  const out = [];
+  const g = s.job && s.job.lastGate;
+  if (g && Array.isArray(g.checks) && g.checks.length) {
+    out.push(h('div', { class: 'gate' }, h('p', { class: 'label' }, 'Last gate · ' + (g.ok ? 'all checks passed' : 'failing')),
+      h('ul', { class: 'checks' }, g.checks.map((c) => h('li', null, h('span', { class: 'st ' + (c.ok ? 'yes' : 'risk') }, c.name), c.ms ? h('span', { class: 'mono helper' }, dur(c.ms)) : null)))));
+  }
+  if (!runs.length) out.push(h('p', { class: 'empty-note' }, 'No runs yet. The night shift starts one once the ticket is queued.'));
+  for (const r of runs) {
+    const res = r.result;
+    const live = !res && s.status === 'building' && s.job && s.job.run === r.run;
+    out.push(h('div', { class: 'run' },
+      h('div', { class: 'run-top' },
+        h('b', null, r.run),
+        res ? h('span', { class: 'st ' + (res === 'PASS' ? 'yes' : /FAIL|BLOCK|ERROR/i.test(res) ? 'risk' : '') }, res) : h('span', { class: 'st ' + (live ? 'yes pulse' : 'no') }, live ? 'running' : 'no result'),
+        r.costUsd != null ? h('span', { class: 'mono' }, '$' + Number(r.costUsd).toFixed(2)) : null,
+        h('span', { class: 'grow' }),
+        r.startedAt ? h('span', { class: 'mono helper', title: fullTime(r.startedAt) }, when(r.startedAt) + (r.finishedAt ? ' · ' + dur(new Date(r.finishedAt) - new Date(r.startedAt)) : '')) : null),
+      r.logs && r.logs.length
+        ? h('div', { class: 'logs' }, r.logs.map((f) => h('button', { type: 'button', class: 'btn', 'data-act': 'log', 'data-run': r.run, 'data-file': f, 'data-key': 'log-' + r.run + '-' + f }, f)))
+        : h('p', { class: 'small helper', style: 'margin-top:8px' }, 'No logs saved for this run.')));
+  }
+  const total = runs.reduce((n, r) => n + (Number(r.costUsd) || 0), 0);
+  if (runs.length > 1 && total) out.push(h('p', { class: 'small muted' }, 'All runs: $' + total.toFixed(2)));
+  return h('div', { class: 'runs' }, out);
+}
+function openTicketView(id) {
+  const dr = $('#drawer');
+  if (S.ticketId === id && !dr.hidden) return;
+  const fresh = dr.hidden;
+  if (fresh) S.lastFocus = document.activeElement;
+  S.ticketId = id;
+  S.ticket = null;
+  S.ticketErr = null;
+  S.confirm = null;
+  S.changesOpen = false;
+  dr.hidden = false;
+  dr.setAttribute('aria-modal', isPhone() ? 'true' : 'false');
+  renderTicket(true);
+  $('#dr-body').scrollTop = 0;
+  markSel();
+  loadTicket(id, { force: true }).then(() => {
+    if (S.ticketId !== id || !fresh) return;
+    const tt = $('#dr-title');
+    if (tt) tt.focus({ preventScroll: true });
+  });
+}
+function closeTicketView() {
+  const dr = $('#drawer');
+  if (dr.hidden) return;
+  const id = S.ticketId;
+  dr.hidden = true;
+  S.ticketId = null;
+  S.ticket = null;
+  S.confirm = null;
+  S.changesOpen = false;
+  markSel();
+  let back = S.lastFocus && document.contains(S.lastFocus) && S.lastFocus !== document.body ? S.lastFocus : null;
+  if (!back && id) back = $('.card[data-id="' + CSS.escape(id) + '"]');
+  if (back && !isPhone()) back.focus({ preventScroll: true });
+}
+
+/* ================= ticket actions ================= */
+async function doAction(action, extra = {}) {
+  const id = S.ticketId;
+  if (!id) return;
+  const key = 'act:' + id + ':' + action;
+  if (S.busy.has(key)) return;
+  S.busy.add(key);
+  renderTicket(true);
+  let ok = false;
+  try {
+    const r = await api(tpath(id, '/action'), 'POST', { action, ...extra });
+    ok = true;
+    if (action === 'drop' || action === 'accept') S.confirm = null;
+    if (action === 'changes') { S.changesOpen = false; delete S.drafts['chg:' + id]; }
+    if (action === 'note') delete S.drafts['note:' + id];
+    if (action === 'discuss') delete S.drafts['dz:' + id];
+    const done = DONE[action];
+    toast(id + ': ' + (typeof done === 'function' ? done(r && r.state) : done || 'done.'));
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    S.busy.delete(key);
+    if (S.ticketId === id) await loadTicket(id, { quiet: true, force: true });
+    scheduleState();
+  }
+  // The round controls just used are gone now: show where the discussion stands.
+  if (ok && (action === 'discuss' || action === 'accept') && S.ticketId === id) focusKey('dz-h');
+}
+function sendChanges() {
+  const id = S.ticketId;
+  const note = (S.drafts['chg:' + id] || '').trim();
+  if (!note) { toast('Say what should change. The coder gets your words as the next round.', 'error'); focusKey('chg:' + id); return; }
+  voiceSent('chg:' + id);
+  doAction('changes', { note });
+}
+function addNote() {
+  const id = S.ticketId;
+  const note = (S.drafts['note:' + id] || '').trim();
+  if (!note) { toast('Write the note first.', 'error'); focusKey('note:' + id); return; }
+  voiceSent('note:' + id);
+  doAction('note', { note });
+}
+async function answer(q, text) {
+  const id = S.ticketId;
+  if (!id || !q) return;
+  const key = 'ans:' + id + ':' + q;
+  text = String(text || '').trim();
+  if (!text) { toast('Write an answer first, or tap one of the options.', 'error'); focusKey(key); return; }
+  if (S.busy.has(key)) return;
+  voiceSent(key);
+  S.busy.add(key);
+  renderTicket(true);
+  try {
+    const r = await api(tpath(id, '/answer'), 'POST', { q, text });
+    delete S.drafts[key];
+    const next = r && r.status && r.status !== 'waiting' ? (r.status === 'shaping' ? ' The lead takes it from here.' : r.status === 'queued' ? ' It is back in the queue.' : r.status === 'discussing' ? ' It is back in discussion.' : ' Now ' + r.status + '.') : '';
+    toast(id + ': answered ' + q + (r && r.decision ? ', recorded as ' + r.decision : '') + '.' + next);
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    S.busy.delete(key);
+    if (S.ticketId === id) await loadTicket(id, { quiet: true, force: true });
+    scheduleState();
+  }
+}
+async function previewOp(op) {
+  const id = S.ticketId;
+  if (!id) return;
+  const key = 'pv:' + id;
+  if (S.busy.has(key)) return;
+  S.busy.add(key);
+  renderTicket(true);
+  try {
+    await api(tpath(id, '/preview'), 'POST', { op });
+    if (op === 'up') {
+      S.pvPending[id] = Date.now();
+      toast(id + ': starting the preview. This page updates as it goes.');
+      setTimeout(() => pvWatch(id), 8000);
+    } else toast(id + ': ' + (op === 'down' ? 'preview stopped.' : 'preview extended.'));
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    S.busy.delete(key);
+    if (S.ticketId === id) await loadTicket(id, { quiet: true, force: true });
+    scheduleState();
+  }
+}
+// POST preview {op:"up"} answers 202 before the work starts; early failures never reach the feed.
+async function pvWatch(id) {
+  const since = S.pvPending[id];
+  if (!since) return;
+  try {
+    const t = await api(tpath(id));
+    const pv = (t.state && t.state.preview) || {};
+    if (['starting', 'building', 'up', 'failed'].includes(pv.state) && (!pv.updated || new Date(pv.updated).getTime() >= since - 3000)) {
+      delete S.pvPending[id];
+      return;
+    }
+  } catch {}
+  delete S.pvPending[id];
+  toast(id + ': the preview did not start, and the server gave no reason. The crew serve log says why.', 'error');
+  if (S.ticketId === id) renderTicket(true);
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); toast('Copied ' + t + '.'); }
+  catch { toast('Copying is blocked here. Select the text and copy it by hand.', 'error'); }
+}
+
+/* ================= chat ================= */
+const nearBottom = (el) => el.scrollHeight - el.scrollTop - el.clientHeight < 90;
+function chatVisible() { return isPhone() ? S.chatPhone : S.chatPanel; }
+function stickChat(fn, mine) {
+  const log = $('#chat-log');
+  const was = nearBottom(log);
+  fn();
+  if (was || mine) { log.scrollTop = log.scrollHeight; $('#newmsg').hidden = true; }
+  else if (chatVisible()) $('#newmsg').hidden = false;
+}
+function msgEl(m) {
+  if (m.role === 'event') {
+    const text = String(m.text || '').replace(/^\[event\]\s*/i, '');
+    const first = text.split(/\n\s*\n/)[0].replace(/\n/g, ' ');
+    return h('div', { class: 'sys', title: text.length > first.length + 2 ? text : null },
+      h('span', { class: 'sys-when' }, when(m.ts)), mdEl(first, 'sys-text', true));
+  }
+  const mine = m.role === 'user';
+  return h('div', { class: 'msg ' + (mine ? 'me' : 'lead') + (m.error ? ' err' : '') },
+    mdEl(m.text || '', 'chat-md'),
+    h('div', { class: 'msg-meta', title: fullTime(m.ts) }, (mine ? '' : 'lead · ') + when(m.ts) + (m.error ? ' · ' + (ERR_LABEL[m.error] || m.error) : '')));
+}
+function appendMsg(m) {
+  const box = $('#msgs');
+  const empty = box.querySelector('.chat-empty');
+  if (empty) empty.remove();
+  const d = toDate(m.ts);
+  const k = d ? dayKey(d) : null;
+  if (k && k !== S.lastDay) { box.append(h('div', { class: 'day' }, dayLabel(m.ts))); S.lastDay = k; }
+  box.append(msgEl(m));
+}
+function renderChatAll() {
+  const log = $('#chat-log');
+  const was = nearBottom(log) || !S.chatRendered;
+  const box = $('#msgs');
+  box.replaceChildren();
+  S.lastDay = null;
+  if (!S.chat.length) box.append(h('p', { class: 'chat-empty' }, 'No messages yet. Ask the lead what is waiting for you, or describe a bug in your own words.'));
+  for (const m of S.chat) appendMsg(m);
+  renderPending();
+  renderTyping();
+  renderLeadHead();
+  S.chatRendered = true;
+  if (was) log.scrollTop = log.scrollHeight;
+}
+function renderPending() {
+  $('#pend').replaceChildren(...S.pending.map((p) => h('div', { class: 'msg me pending' + (p.status === 'failed' ? ' err' : '') },
+    mdEl(p.text, 'chat-md'),
+    h('div', { class: 'msg-meta' },
+      p.status === 'sending' ? 'Sending…' : p.status === 'queued' ? 'Queued. The lead reads it after the current turn.' : p.status === 'failed' ? 'Not sent. ' : 'Sent',
+      p.status === 'failed' ? h('button', { type: 'button', class: 'linkbtn', 'data-act': 'chat-retry', 'data-id': String(p.id) }, 'Send again') : null))));
+}
+function renderTyping() {
+  const el = $('#typing');
+  if (!S.lead.busy) { el.hidden = true; el.replaceChildren(); return; }
+  el.hidden = false;
+  fill(el,
+    h('span', { class: 'st yes pulse' }, S.lead.tools.length || S.lead.partial ? 'Lead is working' : 'Lead is thinking'),
+    S.lead.partial ? mdEl(S.lead.partial, 'chat-md partial') : null,
+    S.lead.tools.length ? h('div', { class: 'tools' }, S.lead.tools.slice(-6).map((x) => h('div', { class: 'tool', title: x }, x))) : null);
+}
+function renderLeadHead() {
+  const st = $('#lead-st');
+  st.className = 'st' + (S.lead.busy ? ' yes pulse' : '');
+  st.textContent = S.lead.busy ? 'working' : 'idle';
+  const l = S.state && S.state.lead;
+  $('#lead-meta').textContent = l && l.turns ? l.turns + (l.turns === 1 ? ' turn' : ' turns') + ' · $' + Number(l.costUsd || 0).toFixed(2) : '';
+}
+function renderChatBtn() {
+  const b = $('#btn-chat');
+  b.classList.toggle('unread', !!S.unread && !chatVisible());
+  b.classList.toggle('busy', !!S.lead.busy && !(S.unread && !chatVisible()));
+}
+function handleChat(m) {
+  if (!m || typeof m !== 'object') return;
+  if (m.role === 'status') {
+    S.lead.busy = !!m.busy;
+    S.lead.at = Date.now();
+    if (!m.busy) { S.lead.partial = ''; S.lead.tools = []; scheduleState(); }
+    stickChat(renderTyping);
+    renderLeadHead();
+    renderChatBtn();
+    return;
+  }
+  if (m.role === 'lead-partial') {
+    S.lead.busy = true;
+    S.lead.partial = String(m.text || '');
+    stickChat(renderTyping);
+    return;
+  }
+  if (m.role === 'lead-tool') {
+    S.lead.busy = true;
+    S.lead.tools.push(String(m.text || ''));
+    if (S.lead.tools.length > 40) S.lead.tools.shift();
+    stickChat(renderTyping);
+    return;
+  }
+  if (!['user', 'lead', 'event'].includes(m.role)) return;
+  let mine = false;
+  if (m.role === 'user') {
+    const i = S.pending.findIndex((p) => p.text.trim() === String(m.text || '').trim());
+    if (i >= 0) { S.pending.splice(i, 1); mine = true; }
+  }
+  if (m.role === 'lead') { S.lead.partial = ''; S.lead.tools = []; }
+  S.chat.push(m);
+  if (S.chat.length > 400) S.chat.splice(0, S.chat.length - 400);
+  stickChat(() => { appendMsg(m); renderPending(); renderTyping(); }, mine);
+  if ((m.role === 'lead' || m.role === 'event') && !chatVisible()) { S.unread = m.role === 'lead' || S.unread; }
+  renderChatBtn();
+}
+async function loadChat() {
+  try {
+    const list = await api('/api/chat?limit=120');
+    const arr = Array.isArray(list) ? list.filter((m) => m && ['user', 'lead', 'event'].includes(m.role)) : [];
+    const last = arr.length ? String(arr[arr.length - 1].ts || '') : '';
+    const extra = S.chat.filter((m) => String(m.ts || '') > last);
+    S.chat = arr.concat(extra);
+    S.pending = S.pending.filter((p) => !S.chat.some((m) => m.role === 'user' && String(m.text || '').trim() === p.text.trim() && String(m.ts || '') >= new Date(Date.parse(p.ts) - 5000).toISOString()));
+    renderChatAll();
+  } catch (e) {
+    if (!S.chatRendered) { $('#msgs').replaceChildren(h('p', { class: 'chat-empty' }, 'Cannot load the chat. ' + e.message)); }
+  }
+}
+async function sendChat(textArg) {
+  const input = $('#chat-in');
+  const fromInput = textArg == null;
+  const text = String(fromInput ? input.value : textArg).trim();
+  if (!text) { if (fromInput) input.focus(); return; }
+  if (fromInput) voiceSent('chat');
+  const p = { id: ++S.seq, text, ts: new Date().toISOString(), status: 'sending' };
+  S.pending.push(p);
+  if (fromInput) { input.value = ''; delete S.drafts.chat; autosize(input); }
+  stickChat(renderPending, true);
+  try {
+    await api('/api/chat', 'POST', { text });
+    if (S.pending.includes(p)) p.status = S.lead.busy ? 'queued' : 'sent';
+  } catch (e) {
+    p.status = 'failed';
+    toast(e.message, 'error');
+  }
+  renderPending();
+}
+function retryChat(pid) {
+  const p = S.pending.find((x) => x.id === pid);
+  if (!p) return;
+  S.pending = S.pending.filter((x) => x !== p);
+  renderPending();
+  sendChat(p.text);
+}
+function applyChat() {
+  const vis = chatVisible();
+  const el = $('#chat');
+  const was = !el.hidden;
+  el.hidden = !vis;
+  document.body.classList.toggle('chat-on', vis && !isPhone());
+  $('#btn-chat').setAttribute('aria-expanded', vis ? 'true' : 'false');
+  if (vis) {
+    S.unread = false;
+    if (!was) { const log = $('#chat-log'); log.scrollTop = log.scrollHeight; autosize($('#chat-in')); }
+  }
+  renderChatBtn();
+  voiceCheck();
+}
+function setChatPanel(on) {
+  S.chatPanel = on;
+  ls.set('crew.chat', on ? '1' : '0');
+  applyChat();
+}
+function toggleChat() {
+  if (isPhone()) { if (S.chatPhone) closeTop(); else nav('chat'); return; }
+  setChatPanel(!S.chatPanel);
+  if (S.chatPanel) $('#chat-in').focus({ preventScroll: true });
+}
+function closeChat() {
+  if (isPhone()) { if (S.chatPhone) closeTop(); return; }
+  setChatPanel(false);
+  $('#btn-chat').focus();
+}
+
+/* ================= dictation (Web Speech API) =================
+   One recognition at a time. Interim words show at the end of the box and are replaced as they firm up;
+   final words stay. The target is found by its draft key on every result, so a ticket view that
+   re-renders mid-sentence keeps receiving the words. No speech API, no mic buttons. */
+// The microphone needs a secure context (https, or localhost); elsewhere dictation cannot work, so no mic.
+const SR = window.isSecureContext === false ? null : window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const V = { rec: null, key: null, shown: '', lang: /^en/i.test(ls.get('crew.voiceLang') || '') ? 'en-US' : 'pl-PL' };
+const langName = () => (V.lang.startsWith('en') ? 'English' : 'Polish');
+const micTitle = (on) => (on ? 'Stop dictating' : 'Dictate (' + langName() + ')');
+function micIcon() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  const at = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false' };
+  for (const k of Object.keys(at)) svg.setAttribute(k, String(at[k]));
+  for (const d of ['M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z', 'M5.5 11a6.5 6.5 0 0 0 13 0', 'M12 17.5V21']) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    svg.append(p);
+  }
+  return svg;
+}
+function micBtn(key) {
+  if (!SR) return null;
+  const on = !!V.rec && V.key === key;
+  return h('button', { type: 'button', class: 'mic', 'data-act': 'mic', 'data-mic': key, 'data-key': 'mic:' + key, 'aria-pressed': on ? 'true' : 'false', 'aria-label': 'Dictate', title: micTitle(on) }, micIcon());
+}
+// A text box with a mic in its corner. key: the textarea's draft key (or its id when it has none).
+function tbox(ta, key) { return h('div', { class: 'tbox' }, ta, micBtn(key)); }
+function langBtn() {
+  const en = V.lang.startsWith('en');
+  return h('button', { type: 'button', class: 'vlang', 'data-act': 'vlang', 'aria-label': 'Dictation language: ' + (en ? 'English' : 'Polish') + '. Switch to ' + (en ? 'Polish' : 'English') + '.', title: 'Dictation language (PL / EN)' }, en ? 'EN' : 'PL');
+}
+function renderVoice() {
+  for (const b of $$('.mic')) {
+    const on = !!V.rec && b.dataset.mic === V.key;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.title = micTitle(on);
+  }
+  const fresh = langBtn();
+  for (const b of $$('.vlang')) {
+    b.textContent = fresh.textContent;
+    b.setAttribute('aria-label', fresh.getAttribute('aria-label'));
+  }
+}
+const voiceTarget = (key) => $('textarea[data-draft="' + CSS.escape(key) + '"]') || document.getElementById(key);
+function voicePut(fin, mid) {
+  const key = V.key;
+  if (!key) return;
+  const el = voiceTarget(key);
+  let cur = el ? el.value : String(S.drafts[key] || '');
+  if (V.shown && cur.endsWith(V.shown)) cur = cur.slice(0, cur.length - V.shown.length);
+  fin = String(fin || '').replace(/\s+/g, ' ').trim();
+  mid = String(mid || '').replace(/\s+/g, ' ').trim();
+  if (fin) cur += (cur && !/\s$/.test(cur) ? ' ' : '') + fin;
+  V.shown = mid ? (cur && !/\s$/.test(cur) ? ' ' : '') + mid : '';
+  const val = cur + V.shown;
+  if (el) {
+    el.value = val;
+    // The same path as typing: the draft is saved and the box grows.
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.scrollTop = el.scrollHeight;
+  } else if (/^(ans|note|chg|dz):/.test(key)) S.drafts[key] = val;
+}
+function voiceError(code) {
+  switch (code) {
+    case 'not-allowed':
+    case 'service-not-allowed': return 'The microphone is blocked for this page. Allow it in the browser’s site settings, then tap the mic again.';
+    case 'no-speech': return 'No speech heard. Tap the mic and speak.';
+    case 'audio-capture': return 'No microphone found.';
+    case 'network': return 'Dictation needs a network connection.';
+    case 'language-not-supported': return 'This browser cannot take dictation in ' + langName() + '. Switch the language next to the chat mic.';
+    case 'aborted': return '';
+    default: return 'Dictation stopped' + (code ? ' (' + code + ').' : '.');
+  }
+}
+function voiceEnd() {
+  // Words still interim stay in the box, as if typed.
+  V.rec = null;
+  V.key = null;
+  V.shown = '';
+  renderVoice();
+}
+function startVoice(key) {
+  if (!SR || !key) return;
+  stopVoice(true);
+  let rec;
+  try { rec = new SR(); } catch { toast('Dictation is not available in this browser.', 'error'); return; }
+  rec.lang = V.lang;
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.onresult = (e) => {
+    if (V.rec !== rec) return;
+    let fin = '';
+    let mid = '';
+    for (let i = e.resultIndex || 0; i < e.results.length; i++) {
+      const r = e.results[i];
+      const t = r && r[0] ? String(r[0].transcript || '') : '';
+      if (r && r.isFinal) fin += ' ' + t;
+      else mid += ' ' + t;
+    }
+    voicePut(fin, mid);
+  };
+  rec.onerror = (e) => {
+    if (V.rec !== rec) return;
+    const msg = voiceError(e && e.error);
+    if (msg) toast(msg, 'error');
+  };
+  rec.onend = () => { if (V.rec === rec) voiceEnd(); };
+  V.rec = rec;
+  V.key = key;
+  V.shown = '';
+  try { rec.start(); }
+  catch (e) { voiceEnd(); toast('Dictation could not start. ' + ((e && e.message) || ''), 'error'); return; }
+  renderVoice();
+}
+// abort: drop what is still being heard (used when the box goes away or another one starts).
+function stopVoice(abort) {
+  const rec = V.rec;
+  if (!rec) return;
+  if (abort) { voiceEnd(); try { rec.abort(); } catch {} return; }
+  try { rec.stop(); } catch { voiceEnd(); }
+}
+// The text in this box is being sent: stop listening, so later words don't refill the emptied box.
+function voiceSent(key) { if (V.rec && V.key === key) stopVoice(true); }
+function toggleVoice(key) {
+  if (V.rec && V.key === key) stopVoice();
+  else startVoice(key);
+}
+function toggleLang() {
+  V.lang = V.lang.startsWith('en') ? 'pl-PL' : 'en-US';
+  ls.set('crew.voiceLang', V.lang);
+  const key = V.rec ? V.key : null;
+  renderVoice();
+  if (key) startVoice(key);
+}
+// Stop when the box being dictated into is gone or hidden (ticket closed, chat closed, round sent).
+function voiceCheck() {
+  if (!V.rec) return;
+  const el = voiceTarget(V.key);
+  if (!el || !el.getClientRects().length) stopVoice(true);
+}
+function initVoice() {
+  if (!SR) return;
+  document.documentElement.classList.add('voice');
+  const chat = $('#chat-box');
+  chat.classList.add('two');
+  chat.append(langBtn(), micBtn('chat'));
+  $('#new-body-box').append(micBtn('new-body'));
+}
+
+/* ================= new item ================= */
+const newType = () => { const r = $('#new-form input[name="type"]:checked'); return r ? r.value : 'bug'; };
+function updateNewLabel() { $('#new-submit').textContent = 'Add ' + newType(); }
+// "Discuss first" follows the type (on for ideas and features) until you tick or untick it yourself.
+// Nothing is remembered between items. With it on, the lead frames the rounds, so "shape it" goes away.
+function syncDiscuss(reset) {
+  const cb = $('#new-discuss');
+  if (reset) S.newDiscussSet = false;
+  if (!S.newDiscussSet) cb.checked = ['idea', 'feature'].includes(newType());
+  $('#new-shape-wrap').hidden = cb.checked;
+}
+function openNew() {
+  const m = $('#new-modal');
+  if (!m.hidden) return;
+  S.newFocus = document.activeElement;
+  const last = ls.get('crew.type');
+  const fresh = !$('#new-title').value.trim();
+  if (last && fresh) {
+    const r = $('#new-form input[name="type"][value="' + CSS.escape(last) + '"]');
+    if (r) r.checked = true;
+  }
+  syncDiscuss(fresh);
+  const ps = ((S.state && S.state.projects) || []).filter((p) => p && p.key);
+  $('#new-proj-wrap').hidden = ps.length < 2;
+  if (ps.length > 1) {
+    const sel = $('#new-project');
+    sel.replaceChildren(...ps.map((p) => h('option', { value: p.key }, p.name || p.key)));
+    const want = S.projectFilter || ls.get('crew.newProject') || '';
+    sel.value = ps.some((p) => p.key === want) ? want : ps[0].key;
+  }
+  updateNewLabel();
+  m.hidden = false;
+  setTimeout(() => { if (!m.hidden) $('#new-title').focus(); }, 40);
+}
+function closeNew() {
+  const m = $('#new-modal');
+  if (m.hidden) return;
+  m.hidden = true;
+  const f = S.newFocus;
+  if (f && document.contains(f) && f !== document.body && !isPhone()) f.focus({ preventScroll: true });
+}
+async function submitNew() {
+  const btn = $('#new-submit');
+  if (btn.disabled) return;
+  const title = $('#new-title').value.trim();
+  if (!title) { toast('Give it a title first.', 'error'); $('#new-title').focus(); return; }
+  voiceSent('new-body');
+  const pr = $('#new-form input[name="priority"]:checked');
+  const body = { type: newType(), title, body: $('#new-body').value.trim(), priority: Number(pr ? pr.value : 2), shape: $('#new-shape').checked };
+  if ($('#new-discuss').checked) body.discuss = true;
+  if (!$('#new-proj-wrap').hidden) {
+    body.project = $('#new-project').value;
+    ls.set('crew.newProject', body.project);
+  }
+  btn.disabled = true;
+  try {
+    const r = await api('/api/tickets', 'POST', body);
+    ls.set('crew.type', body.type);
+    $('#new-form').reset();
+    const tr = $('#new-form input[name="type"][value="' + CSS.escape(body.type) + '"]');
+    if (tr) tr.checked = true;
+    updateNewLabel();
+    syncDiscuss(true);
+    toast('Added ' + r.id + '.' + (body.discuss ? ' It starts as a discussion; the lead sets up design round 1.' : body.shape ? ' The lead is shaping it.' : ''));
+    scheduleState();
+    if (r && r.id && TICKET_RE.test(r.id)) nav(r.id, { replace: true });
+    else closeTop();
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ================= log viewer ================= */
+async function openLog(id, run, file, tail = 400) {
+  if (!id || !run || !file) return;
+  const modal = $('#log-modal');
+  const first = modal.hidden;
+  if (first) S.logFocus = document.activeElement;
+  const L = (S.log = { id, run, file, tail, text: null, err: null });
+  modal.hidden = false;
+  lockScroll();
+  renderLog();
+  if (first) $('#log-close').focus();
+  try { L.text = await api(tpath(id, '/log/' + encodeURIComponent(run) + '/' + encodeURIComponent(file)) + '?readable=1&tail=' + tail); }
+  catch (e) { L.err = e.message; }
+  if (S.log !== L) return;
+  renderLog();
+  const pre = $('#log-pre');
+  pre.scrollTop = pre.scrollHeight;
+}
+function renderLog() {
+  const L = S.log;
+  if (!L) return;
+  $('#log-h').textContent = L.file;
+  $('#log-sub').textContent = L.id + ' · ' + L.run + ' · last ' + L.tail + ' lines';
+  const pre = $('#log-pre');
+  pre.textContent = L.err ? L.err : L.text == null ? 'Loading…' : String(L.text).trim() ? String(L.text) : '(the log is empty)';
+  pre.classList.toggle('err', !!L.err);
+  $('#log-more').hidden = L.tail >= 4000;
+}
+function closeLog() {
+  const m = $('#log-modal');
+  if (m.hidden) return;
+  m.hidden = true;
+  S.log = null;
+  lockScroll();
+  if (S.logFocus && document.contains(S.logFocus)) S.logFocus.focus({ preventScroll: true });
+}
+
+/* ================= routing (#PA-008, #chat, #new) ================= */
+// history.state.stack lists the routes of the entries below this one ('' = the board), nearest last.
+function curRoute() { try { return decodeURIComponent(location.hash.slice(1)); } catch { return ''; } }
+function navStack() { const st = history.state; return st && Array.isArray(st.stack) ? st.stack : []; }
+const home = () => location.pathname + location.search;
+function nav(hash, { replace = false } = {}) {
+  const cur = curRoute();
+  const stack = navStack();
+  if (!hash) {
+    if (stack.length) history.go(-stack.length);
+    else { history.replaceState({ stack: [] }, '', home()); route(); }
+    return;
+  }
+  if (hash === cur) { route(); return; }
+  const url = '#' + encodeURIComponent(hash);
+  // Ticket to ticket replaces, so Back and Esc do not walk through every card you looked at.
+  if (replace || (TICKET_RE.test(cur) && TICKET_RE.test(hash))) history.replaceState({ stack }, '', url);
+  else history.pushState({ stack: stack.concat([cur]) }, '', url);
+  route();
+}
+// Esc and the close buttons. A ticket closes to whatever it was opened from (the board or the chat),
+// past any ticket it was opened over (New from a ticket); other layers step back once.
+function closeTop() {
+  const cur = curRoute();
+  const stack = navStack();
+  let n = 0;
+  if (TICKET_RE.test(cur)) {
+    for (let i = stack.length - 1; i >= 0; i--) { n++; if (!TICKET_RE.test(stack[i]) && stack[i] !== 'new') break; }
+  } else if (cur && stack.length) n = 1;
+  if (n) history.go(-n);
+  else { history.replaceState({ stack: [] }, '', home()); route(); }
+}
+function lockScroll() {
+  const modal = !$('#new-modal').hidden || !$('#log-modal').hidden;
+  document.documentElement.classList.toggle('lock', modal || (isPhone() && (!!S.ticketId || S.chatPhone)));
+}
+function route() {
+  const r = curRoute();
+  const stack = navStack();
+  const phone = isPhone();
+  if (r === 'chat' && !phone) {
+    history.replaceState({ stack }, '', home());
+    setChatPanel(true);
+    return route();
+  }
+  S.chatPhone = phone && (r === 'chat' || stack[stack.length - 1] === 'chat');
+  if (TICKET_RE.test(r)) openTicketView(r.toUpperCase());
+  else closeTicketView();
+  if (r === 'new') openNew();
+  else closeNew();
+  applyChat();
+  lockScroll();
+  voiceCheck();
+}
+
+/* ================= live updates ================= */
+let es = null;
+let esRetry = 1000;
+let esTimer = null;
+let everLive = false;
+function onFeed(ev) {
+  const d = parse(ev.data);
+  if (!d) return;
+  if (d.ticket) S.flash[d.ticket] = Date.now();
+  scheduleState();
+  if (d.ticket && d.ticket === S.ticketId) {
+    if (d.type === 'preview') delete S.pvPending[d.ticket];
+    scheduleTicket();
+  }
+}
+function connect() {
+  clearTimeout(esTimer);
+  if (es) { try { es.close(); } catch {} }
+  let src;
+  try { src = new EventSource('/api/events'); }
+  catch { setLive('reconnecting'); esTimer = setTimeout(connect, esRetry); return; }
+  es = src;
+  src.addEventListener('hello', () => {
+    esRetry = 1000;
+    const again = everLive;
+    everLive = true;
+    setLive('live');
+    if (again) { loadState(); loadChat(); if (S.ticketId) loadTicket(S.ticketId, { quiet: true }); }
+  });
+  src.addEventListener('feed', onFeed);
+  src.addEventListener('chat', (ev) => handleChat(parse(ev.data)));
+  src.addEventListener('runner', (ev) => {
+    const r = parse(ev.data);
+    if (r && S.state) {
+      const was = (S.state.runner && S.state.runner.current) || null;
+      S.state.runner = r;
+      renderBar();
+      // A design round moving on (design → check → publish) writes no feed event; the runner's own update says so.
+      const cur = r.current;
+      if (cur && cur.kind === 'design' && (!was || was.ticket !== cur.ticket || was.step !== cur.step)) {
+        scheduleState();
+        if (cur.ticket === S.ticketId) scheduleTicket();
+      }
+      // A queued design round says what the runner is doing.
+      const d = S.ticket && S.ticket.state && S.ticket.state.discussion;
+      if (d && d.state === 'queued') renderTicket();
+    }
+  });
+  src.addEventListener('lab', (ev) => {
+    const l = parse(ev.data);
+    if (Array.isArray(l) && S.state) { S.state.lab = l; renderBar(); }
+  });
+  src.addEventListener('previews', (ev) => {
+    const p = parse(ev.data);
+    if (Array.isArray(p) && S.state) { S.state.previews = p; renderBar(); if (S.ticket) renderTicket(); }
+  });
+  src.onerror = () => {
+    if (es !== src) return;
+    setLive('reconnecting');
+    if (src.readyState === 2) {
+      esTimer = setTimeout(connect, esRetry);
+      esRetry = Math.min(esRetry * 2, 30000);
+    }
+  };
+}
+function tickTimes() {
+  $$('[data-ago]').forEach((el) => { el.textContent = ago(el.dataset.ago); });
+  renderBar();
+}
+
+/* ================= events ================= */
+function trapFocus(root, e) {
+  const els = $$('a[href], button:not([disabled]), textarea, input:not([type="hidden"]), select, [tabindex]:not([tabindex="-1"])', root).filter((x) => x.offsetParent !== null || x === document.activeElement);
+  if (!els.length) return;
+  const first = els[0];
+  const last = els[els.length - 1];
+  if (e.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+}
+function onClick(e) {
+  const a = e.target.closest('a[href^="#"]');
+  if (a) {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    closeMenu();
+    closeLab();
+    nav(curRouteOf(a.getAttribute('href')));
+    return;
+  }
+  const menu = $('#runmenu');
+  if (!menu.hidden && !e.target.closest('#runmenu') && !e.target.closest('[data-act="menu"]')) closeMenu();
+  const lab = $('#labmenu');
+  if (!lab.hidden && !e.target.closest('#labmenu') && !e.target.closest('[data-act="lab-menu"]')) closeLab();
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const id = S.ticketId;
+  switch (b.dataset.act) {
+    case 'menu': if (menu.hidden) openMenu(); else closeMenu(); return;
+    case 'lab-menu': if (lab.hidden) openLab(); else closeLab(); return;
+    case 'lab': labOp(b.dataset.project, b.dataset.op); return;
+    case 'mic': toggleVoice(b.dataset.mic); return;
+    case 'vlang': toggleLang(); return;
+    case 'dz-send': sendDiscuss(); return;
+    case 'dz-retry': { const d = S.ticket && S.ticket.state.discussion; doAction('discuss', { note: String((d && d.pending && d.pending.note) || '').trim() }); return; }
+    case 'dz-more': if (id) { const k = id + ':' + b.dataset.n; S.dzOpen[k] = !S.dzOpen[k]; renderTicket(true); focusKey('dz-more-' + b.dataset.n); } return;
+    case 'dz-accept-ask': S.confirm = S.confirm === 'accept' ? null : 'accept'; renderTicket(true); focusKey(S.confirm ? 'dz-accept-no' : 'dz-accept'); return;
+    case 'dz-accept-cancel': S.confirm = null; renderTicket(true); focusKey('dz-accept'); return;
+    case 'dz-accept': doAction('accept', { round: Number(b.dataset.round) }); return;
+    case 'new': closeMenu(); closeLab(); nav('new'); return;
+    case 'chat': closeMenu(); closeLab(); toggleChat(); return;
+    case 'close-chat': closeChat(); return;
+    case 'close-top': closeTop(); return;
+    case 'board-tab': setBoardTab(b.dataset.tab); return;
+    case 'tab': if (id) { S.tabs[id] = b.dataset.tab; S.tabPicked[id] = true; renderTicket(true); focusKey('tab-' + b.dataset.tab); } return;
+    case 'answer': answer(b.dataset.q, b.dataset.text); return;
+    case 'answer-free': answer(b.dataset.q, S.drafts['ans:' + id + ':' + b.dataset.q] || ''); return;
+    case 'action': doAction(b.dataset.action); return;
+    case 'drop-ask': S.confirm = S.confirm === 'drop' ? null : 'drop'; renderTicket(true); focusKey(S.confirm ? 'drop-no' : 'act-drop'); return;
+    case 'drop-cancel': S.confirm = null; renderTicket(true); focusKey('act-drop'); return;
+    case 'changes-toggle': S.changesOpen = !S.changesOpen; renderTicket(true); focusKey(S.changesOpen ? 'chg:' + id : 'act-changes'); return;
+    case 'changes-send': sendChanges(); return;
+    case 'note-add': addNote(); return;
+    case 'approval': if (b.getAttribute('aria-pressed') !== 'true') doAction('approval', { value: b.dataset.value }); return;
+    case 'pv': previewOp(b.dataset.op); return;
+    case 'log': openLog(id, b.dataset.run, b.dataset.file); return;
+    case 'log-refresh': if (S.log) openLog(S.log.id, S.log.run, S.log.file, S.log.tail); return;
+    case 'log-more': if (S.log) openLog(S.log.id, S.log.run, S.log.file, 4000); return;
+    case 'log-close': closeLog(); return;
+    case 'copy': copyText(b.dataset.copy || ''); return;
+    case 'mode': runnerPost({ mode: b.dataset.mode }, 'Runner mode: ' + b.dataset.mode + '.'); return;
+    case 'clear-park': runnerPost({ clearPark: true }, 'Usage park cleared. The runner tries again on its next check.'); return;
+    case 'clear-auth': runnerPost({ clearAuth: true }, 'Login problem cleared. Log in on the box if it comes back.'); return;
+    case 'wake': runnerPost({ wake: true }, 'Asked the runner to check the queue now.'); return;
+    case 'chat-retry': retryChat(Number(b.dataset.id)); return;
+    case 'reload': loadState(); return;
+    case 'newmsg': { const log = $('#chat-log'); log.scrollTop = log.scrollHeight; b.hidden = true; return; }
+    default:
+  }
+}
+function curRouteOf(href) { try { return decodeURIComponent(String(href || '').replace(/^#/, '')); } catch { return ''; } }
+function onKey(e) {
+  if (e.key === 'Escape') {
+    if (V.rec && e.target.closest && e.target.closest('.mic')) { e.preventDefault(); stopVoice(); return; }
+    if (!$('#log-modal').hidden) { e.preventDefault(); closeLog(); return; }
+    if (!$('#runmenu').hidden) { e.preventDefault(); closeMenu(true); return; }
+    if (!$('#labmenu').hidden) { e.preventDefault(); closeLab(true); return; }
+    if (S.confirm && S.ticketId) { e.preventDefault(); const k = S.confirm === 'accept' ? 'dz-accept' : 'act-drop'; S.confirm = null; renderTicket(true); focusKey(k); return; }
+    if (curRoute()) { e.preventDefault(); closeTop(); return; }
+    if (!isPhone() && S.chatPanel && $('#chat').contains(document.activeElement)) { e.preventDefault(); closeChat(); }
+    return;
+  }
+  if (e.key === 'Tab') {
+    const m = !$('#log-modal').hidden ? $('#log-modal') : !$('#new-modal').hidden ? $('#new-modal') : !$('#runmenu').hidden || !$('#labmenu').hidden ? null : (isPhone() && S.ticketId) ? $('#drawer') : null;
+    if (m) trapFocus(m, e);
+    return;
+  }
+  const tab = e.target.closest && e.target.closest('[role="tab"]');
+  if (tab && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+    const tabs = $$('[role="tab"]', tab.parentElement);
+    let i = tabs.indexOf(tab);
+    i = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    e.preventDefault();
+    tabs[i].click();
+    tabs[i].focus();
+    return;
+  }
+  const t = e.target;
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && t.dataset && t.dataset.draft) {
+    const k = t.dataset.draft;
+    if (k.startsWith('ans:')) { e.preventDefault(); answer(k.split(':')[2], t.value); }
+    else if (k.startsWith('note:')) { e.preventDefault(); addNote(); }
+    else if (k.startsWith('chg:')) { e.preventDefault(); sendChanges(); }
+    else if (k.startsWith('dz:')) { e.preventDefault(); sendDiscuss(); }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  if (t.closest && t.closest('input, textarea, select, [contenteditable="true"]')) return;
+  if (!$('#new-modal').hidden || !$('#log-modal').hidden) return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); nav('new'); }
+  else if ((e.key === 'c' || e.key === 'C') && !isPhone()) { e.preventDefault(); toggleChat(); }
+}
+function onInput(e) {
+  const el = e.target;
+  if (el.dataset && el.dataset.draft) S.drafts[el.dataset.draft] = el.value;
+  if (el.tagName === 'TEXTAREA') autosize(el);
+}
+function onChange(e) {
+  const el = e.target;
+  if (el.dataset && el.dataset.change === 'priority') {
+    const v = Number(el.value);
+    if (S.ticket && S.ticket.state.priority !== v) doAction('priority', { value: v });
+  }
+  if (el.name === 'type' && el.form && el.form.id === 'new-form') { updateNewLabel(); syncDiscuss(); }
+  if (el.id === 'new-discuss') { S.newDiscussSet = true; syncDiscuss(); }
+}
+
+/* ================= init ================= */
+function init() {
+  // A shared link like /#PA-008 gets the board underneath it, so Back and Esc land on the board.
+  const first = curRoute();
+  try {
+    history.replaceState({ stack: [] }, '', home());
+    if (first) history.pushState({ stack: [''] }, '', '#' + encodeURIComponent(first));
+  } catch {}
+  const bar = $('#bar');
+  const setBarH = () => document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
+  setBarH();
+  if ('ResizeObserver' in window) new ResizeObserver(setBarH).observe(bar);
+  $('#board').replaceChildren(h('p', { class: 'board-msg' }, 'Loading the board…'));
+  document.addEventListener('click', onClick);
+  document.addEventListener('keydown', onKey);
+  document.addEventListener('input', onInput);
+  document.addEventListener('change', onChange);
+  window.addEventListener('popstate', route);
+  window.addEventListener('hashchange', route);
+  window.addEventListener('resize', () => {
+    if (!$('#runmenu').hidden) placeMenu();
+    if (!$('#labmenu').hidden) placeMenu('#labmenu', '#labchip');
+  });
+  initVoice();
+  $('#chat-form').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+  $('#chat-in').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendChat(); }
+  });
+  $('#chat-log').addEventListener('scroll', () => { if (nearBottom($('#chat-log'))) $('#newmsg').hidden = true; }, { passive: true });
+  $('#new-form').addEventListener('submit', (e) => { e.preventDefault(); submitNew(); });
+  $('#new-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTop(); });
+  $('#log-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeLog(); });
+  $('#drawer').addEventListener('focusout', () => {
+    // Catch up on updates that arrived while typing, once the click that moved focus has landed.
+    setTimeout(() => { if (S.ticketDirty && !typingIn($('#drawer'))) renderTicket(); }, 400);
+  });
+  mqPhone.addEventListener('change', () => { route(); if (S.ticketId) { $('#drawer').setAttribute('aria-modal', isPhone() ? 'true' : 'false'); renderTicket(); } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') { stopVoice(); return; }
+    loadState();
+    loadChat();
+    if (S.ticketId) loadTicket(S.ticketId, { quiet: true });
+    if (!es || es.readyState === 2) connect();
+  });
+  route();
+  applyChat();
+  loadState();
+  loadChat();
+  connect();
+  setInterval(tickTimes, 20000);
+  setInterval(() => { if (S.live !== 'live') loadState(); }, 30000);
+}
+init();
+})();
+</script>
+</body>
+</html>

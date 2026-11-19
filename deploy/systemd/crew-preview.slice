@@ -1,0 +1,8 @@
+# Previews you start from the board (next start, ~300-500 MB each).
+[Unit]
+Description=crew: previews
+
+[Slice]
+MemoryMax=1536M
+MemorySwapMax=256M
+CPUWeight=50

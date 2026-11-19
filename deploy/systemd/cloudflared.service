@@ -1,0 +1,18 @@
+# Cloudflare Tunnel for crew.example.com and the preview slots. Runs as your admin user, NOT as crew: an agent
+# that could read the tunnel token could join the tunnel from elsewhere and see your traffic.
+# The tunnel is "remotely managed": hostnames and Access are set in the Cloudflare dashboard,
+# this only runs the connector. Put TUNNEL_TOKEN=... in ~/.config/cloudflared/crew.env (chmod 600).
+[Unit]
+Description=Cloudflare Tunnel for crew
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/cloudflared/crew.env
+ExecStart=%h/.local/bin/cloudflared tunnel --no-autoupdate --protocol http2 run
+Restart=on-failure
+RestartSec=10
+MemoryMax=200M
+
+[Install]
+WantedBy=default.target

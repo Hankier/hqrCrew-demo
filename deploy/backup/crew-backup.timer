@@ -1,0 +1,11 @@
+# 22:30 Warsaw time, before the night shift starts at 23:00. Persistent catches up after downtime.
+[Unit]
+Description=Nightly database backup
+
+[Timer]
+OnCalendar=*-*-* 22:30:00 Europe/Warsaw
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,16 @@
+{
+  "prefix": "{prefix}",
+  "name": "{name}",
+  "repo": { "url": "", "base": "main", "remote": "origin", "push": false, "compareUrl": "" },
+  "setup": ["uv sync --frozen"],
+  "gate": [
+    { "name": "lint", "run": "uv run ruff check .", "stage": "fast", "timeoutMin": 5 },
+    { "name": "format", "run": "uv run ruff format --check .", "stage": "fast", "timeoutMin": 5 },
+    { "name": "types", "run": "uv run mypy .", "stage": "fast", "timeoutMin": 10 },
+    { "name": "tests", "run": "uv run pytest -q", "stage": "fast", "timeoutMin": 20 }
+  ],
+  "gateProtected": ["conftest.py", "tests/conftest.py", "pytest.ini", "setup.cfg", "tox.ini", "mypy.ini", "ruff.toml", ".github/**", "CLAUDE.md", "AGENTS.md", ".claude/**"],
+  "env": { "file": "agent.env", "vars": { "PYTHONDONTWRITEBYTECODE": "1" } },
+  "db": null,
+  "preview": null
+}

@@ -1,0 +1,20 @@
+{
+  "timezone": "Europe/Warsaw",
+  "listen": { "host": "127.0.0.1", "port": 20100 },
+  "publicUrl": "https://crew.example.com",
+  "nightShift": { "start": "23:00", "end": "07:00", "maxJobsPerNight": 6, "maxJobMinutes": 120 },
+  "runner": { "mode": "night", "concurrency": 1, "tickSeconds": 20 },
+  "budget": { "fiveHourMax": 0.9, "sevenDayMax": 0.75 },
+  "limits": { "questionRounds": 3, "gateRounds": 2, "verifyRounds": 2, "minFreeDiskGb": 8, "recoveries": 2, "parks": 3, "leadWaitMinutes": 20 },
+  "models": { "lead": "opus", "coder": "sonnet", "verifier": "opus" },
+  "effort": { "lead": "high", "coder": "high", "verifier": "medium" },
+  "permissionMode": { "lead": "dontAsk", "coder": "bypassPermissions", "verifier": "bypassPermissions" },
+  "claude": { "bin": "claude" },
+  "memory": { "jobMax": "3500M", "checkMax": "2500M", "leadMax": "1500M", "previewMax": "1G", "swapMax": "1G" },
+  "autoQueue": { "bug": true, "chore": true, "feature": false, "idea": false },
+  "digest": { "at": "07:30" },
+  "lead": { "rotateAtTokens": 120000, "rotateAfterTurns": 60, "web": false },
+  "notify": { "ntfy": null, "discordWebhook": null },
+  "safety": { "backupStatusFile": "/srv/crew-share/backup-status.json", "backupMaxAgeHours": 36, "forbiddenPorts": [5432, 5555, 48684, 48690], "privateDirs": ["/home/ops"] },
+  "auth": { "cfAccess": { "team": "", "aud": "" }, "emails": [], "token": null }
+}
